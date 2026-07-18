@@ -110,7 +110,7 @@ export function ChatPane(props: Props) {
                   </div>
                 }
               >
-                <div class="self-end max-w-[80%] rounded-lg bg-muted-foreground/20 px-4 py-2 text-foreground">
+                <div class="self-end max-w-[80%] rounded-lg bg-muted-foreground/20 px-5 py-2 text-foreground">
                   <div class="message-content">
                     <MarkdownMessage content={message.content ?? ""} />
                   </div>
