@@ -8,6 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt \"src/**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
@@ -27,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "tsx": "^4.23.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.4"
   }
 }

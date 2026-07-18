@@ -20,6 +20,26 @@ export interface ToolExecutor {
   execute: (args: Record<string, unknown>) => Promise<string> | string;
 }
 
+function isValidExpression(expression: string): boolean {
+  // Only allow numbers, arithmetic operators, parentheses, decimal points, and whitespace.
+  if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
+    return false;
+  }
+
+  // Reject obviously empty or operator-only input and enforce balanced parentheses.
+  if (!/[0-9]/.test(expression)) {
+    return false;
+  }
+
+  let depth = 0;
+  for (const char of expression) {
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+}
+
 const registry = new Map<string, ToolExecutor>([
   [
     getCurrentTimeTool.function.name,
@@ -34,7 +54,7 @@ const registry = new Map<string, ToolExecutor>([
       definition: calculatorTool,
       execute: (args) => {
         const expression = String(args.expression ?? "");
-        if (!/^\d+\s*[-+*/()\s.]*\d+$/.test(expression)) {
+        if (!isValidExpression(expression)) {
           throw new Error("Invalid calculator expression");
         }
         // Safe math via Function with no access to globals.

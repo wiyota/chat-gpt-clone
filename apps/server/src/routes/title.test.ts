@@ -1,0 +1,102 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Hono } from "hono";
+import { titleRoute } from "./title.js";
+
+vi.mock("../supabase/client.js", () => ({
+  createUserClient: vi.fn(),
+}));
+
+vi.mock("../db/title.js", () => ({
+  generateTitle: vi.fn(),
+  updateConversationTitle: vi.fn(),
+}));
+
+vi.mock("../llm/index.js", () => ({
+  createLLMProvider: vi.fn(),
+}));
+
+import { createUserClient } from "../supabase/client.js";
+import { generateTitle, updateConversationTitle } from "../db/title.js";
+import type { User } from "@supabase/supabase-js";
+
+describe("titleRoute", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const mockedCreateUserClient = vi.mocked(createUserClient);
+    mockedCreateUserClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: {
+              id: "user-1",
+              email: "test@example.com",
+              app_metadata: {},
+              user_metadata: {},
+              aud: "authenticated",
+              created_at: new Date().toISOString(),
+            } as User,
+          },
+          error: null,
+        })),
+      },
+    } as unknown as ReturnType<typeof createUserClient>);
+  });
+
+  function buildApp() {
+    return new Hono().route("/api/conversations/:id/title", titleRoute);
+  }
+
+  function request(id: string, body: unknown) {
+    return buildApp().request(`/api/conversations/${id}/title`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("updates the title manually", async () => {
+    vi.mocked(updateConversationTitle).mockResolvedValue(true);
+    const res = await request("conv-1", { title: "Custom title" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "Custom title" });
+    expect(updateConversationTitle).toHaveBeenCalledWith(
+      expect.anything(),
+      "conv-1",
+      "Custom title",
+    );
+  });
+
+  it("falls back to default title when an empty title is provided", async () => {
+    vi.mocked(updateConversationTitle).mockResolvedValue(true);
+    const res = await request("conv-1", { title: "   " });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "New conversation" });
+    expect(updateConversationTitle).not.toHaveBeenCalled();
+  });
+
+  it("generates and updates a title when none is provided", async () => {
+    vi.mocked(generateTitle).mockResolvedValue("Generated title");
+    vi.mocked(updateConversationTitle).mockResolvedValue(true);
+    const res = await request("conv-1", {});
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "Generated title" });
+  });
+
+  it("falls back to default title when generation returns nothing", async () => {
+    vi.mocked(generateTitle).mockResolvedValue(null);
+    vi.mocked(updateConversationTitle).mockResolvedValue(true);
+    const res = await request("conv-1", {});
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: "New conversation" });
+  });
+
+  it("returns 500 when the title update fails", async () => {
+    vi.mocked(updateConversationTitle).mockResolvedValue(false);
+    const res = await request("conv-1", { title: "Custom title" });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Failed to update title" });
+  });
+});
