@@ -18,6 +18,7 @@ const envSchema = Type.Object({
   SUPABASE_URL: Type.String({ format: "uri" }),
   SUPABASE_SECRET_KEY: Type.String({ minLength: 1 }),
   OPENAI_API_KEY: Type.String({ minLength: 1 }),
+  OPENAI_MODEL: Type.Optional(Type.String()),
   LLM_PROVIDER: Type.Optional(Type.Union([Type.Literal("openai"), Type.Literal("anthropic")])),
   CORS_ORIGIN: Type.Optional(Type.String()),
 });
@@ -27,6 +28,7 @@ export const env = Value.Decode(envSchema, {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
   LLM_PROVIDER: process.env.LLM_PROVIDER ?? "openai",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
 });

@@ -1,13 +1,15 @@
+import { env } from "../env.js";
 import OpenAI from "openai";
 import type { Message, StreamChunk } from "@chat/shared";
 import type { LLMAdapter } from "./provider.js";
 
 export class OpenAIAdapter implements LLMAdapter {
   private client: OpenAI;
-  private model = "gpt-4o-mini";
+  private model: string;
 
   constructor(apiKey: string) {
     this.client = new OpenAI({ apiKey });
+    this.model = env.OPENAI_MODEL as string;
   }
 
   async chat(messages: Message[]): Promise<string> {
