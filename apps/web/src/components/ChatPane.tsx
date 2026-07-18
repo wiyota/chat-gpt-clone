@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For, Show, createEffect, on } from "solid-js";
 import type { Message } from "@chat/shared";
 import { MarkdownMessage } from "./MarkdownMessage.js";
 import { Button } from "@/components/ui/button.js";
@@ -63,6 +63,23 @@ function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled:
 export function ChatPane(props: Props) {
   const submitDisabled = () => props.isLoading || !!props.quotaError || !props.input.trim();
 
+  let scrollRef: HTMLDivElement | undefined;
+
+  const scrollToBottom = () => {
+    if (scrollRef) {
+      scrollRef.scrollTop = scrollRef.scrollHeight;
+    }
+  };
+
+  createEffect(
+    on(
+      () => [props.messages().length, props.streamingContent],
+      () => {
+        queueMicrotask(scrollToBottom);
+      },
+    ),
+  );
+
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
       <header class="shrink-0 flex items-center justify-between border-b px-4 py-3">
@@ -75,7 +92,10 @@ export function ChatPane(props: Props) {
         </div>
       </Show>
 
-      <div class="flex-1 gap-6 overflow-y-auto p-6 [display:flex] [flex-direction:column]">
+      <div
+        ref={scrollRef}
+        class="flex-1 gap-6 overflow-y-auto p-6 [display:flex] [flex-direction:column]"
+      >
         <For each={props.messages()}>
           {(message) => (
             <Show when={shouldRender(message)} fallback={null}>
