@@ -8,10 +8,12 @@ export function createApp() {
   const app = new Hono();
 
   app.use(
+    "*",
     cors({
       origin: env.CORS_ORIGIN as string,
       allowMethods: ["GET", "POST", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
     }),
   );
 

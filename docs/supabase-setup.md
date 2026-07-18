@@ -85,18 +85,43 @@ The project stores migrations under:
 supabase/migrations/
 ```
 
-Run the first migration from the dashboard:
+### Option A: SQL Editor in the dashboard (quickest for learning)
 
-1. Open the **SQL Editor**.
-2. Copy the contents of `supabase/migrations/0001_initial_schema.sql`.
-3. Click **Run**.
+1. Open the **SQL Editor** from the Supabase dashboard left sidebar.
+2. Click **New query**.
+3. Copy the contents of `supabase/migrations/0001_initial_schema.sql`.
+4. Click **Run**.
+5. Open the **Table Editor** and confirm that `conversations`, `messages`, and `usage` tables exist.
+6. Go to each table → **Policies** and confirm RLS policies are enabled.
 
-Alternatively, install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) and run:
+### Option B: Supabase CLI (recommended for ongoing development)
+
+Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) and run:
 
 ```sh
-supabase link
+# One-time: link your local project to the remote Supabase project
+supabase link --project-ref <project-ref>
+
+# Push all pending migrations
 supabase db push
 ```
+
+To create a new migration later:
+
+```sh
+supabase migration new add_summary_column
+```
+
+This creates a new SQL file under `supabase/migrations/` that you can edit and then push.
+
+### Verify RLS is active
+
+After running the first migration:
+
+1. Open **Table Editor**.
+2. Select `conversations` or `messages`.
+3. Click **Authentication → Policies**.
+4. Confirm policies are enabled and reference `auth.uid()`.
 
 ## 6. Required environment variables
 
@@ -122,15 +147,18 @@ LLM_PROVIDER=openai
 CORS_ORIGIN=http://localhost:5173
 ```
 
-## 7. Verify RLS is active
+## 7. Verify OAuth sign-in works
 
-After running the first migration:
+1. Start the dev server and frontend:
 
-1. Open **Table Editor**.
-2. Select `conversations` or `messages`.
-3. Click **Authentication → Policies**.
-4. Confirm policies are enabled and reference `auth.uid()`.
+   ```sh
+   pnpm --parallel -r dev
+   ```
+
+2. Open http://localhost:5173.
+3. Click **Sign in with Google**.
+4. After OAuth redirect, the UI should show your email and the chat form.
 
 ## 8. Next step
 
-Once these values are in place, the server and frontend can start. The first slice only exercises the chat endpoint; actual database persistence is added in the auth + conversation ownership slice.
+Once sign-in works, the chat endpoint will create `conversations` and `messages` rows for each turn. You can verify this in the Supabase **Table Editor**.
