@@ -1,0 +1,17 @@
+{
+  "name": "chat-gpt-clone",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@11.14.0",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  }
+}
