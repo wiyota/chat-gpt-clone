@@ -7,6 +7,7 @@ import {
   useConversations,
   useConversationMessages,
   useDeleteConversation,
+  useUpdateTitle,
 } from "@/lib/conversations.js";
 import { ChatPane } from "@/components/ChatPane.js";
 import { ConversationSidebar } from "@/components/ConversationSidebar.js";
@@ -31,6 +32,7 @@ export function App() {
   const conversations = useConversations();
   const messagesQuery = useConversationMessages(activeConversationId);
   const deleteConversation = useDeleteConversation();
+  const updateTitle = useUpdateTitle();
 
   const messages = () => {
     if (isStreaming()) return liveMessages();
@@ -69,8 +71,16 @@ export function App() {
         setAbortController(null);
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       conversations.refetch();
+
+      const conversationId = result?.conversationId;
+      if (conversationId && !result?.aborted) {
+        const conversation = conversations.data?.find((c) => c.id === conversationId);
+        if (!conversation || conversation.title === "New conversation") {
+          updateTitle.mutate({ id: conversationId });
+        }
+      }
     },
     onError: (err) => {
       setLiveMessages([]);
@@ -105,7 +115,7 @@ export function App() {
     } catch (err) {
       if (signal.aborted) {
         await showPersistedMessages();
-        return { aborted: true };
+        return { aborted: true, conversationId };
       }
       throw err;
     }
@@ -136,7 +146,7 @@ export function App() {
       setLiveMessages([]);
       setStreamingContent("");
       setIsStreaming(false);
-      return { aborted: false };
+      return { aborted: false, conversationId: body.conversationId };
     }
 
     if (!res.body) throw new Error("No response body");
@@ -172,7 +182,7 @@ export function App() {
     } catch (err) {
       if (signal.aborted) {
         await showPersistedMessages(finalConversationId);
-        return { aborted: true };
+        return { aborted: true, conversationId: finalConversationId };
       }
       throw err;
     } finally {
@@ -187,7 +197,7 @@ export function App() {
     setLiveMessages([]);
     setStreamingContent("");
     setIsStreaming(false);
-    return { aborted: false };
+    return { aborted: false, conversationId: finalConversationId };
   }
 
   async function showPersistedMessages(fallbackId?: string) {

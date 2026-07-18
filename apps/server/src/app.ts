@@ -5,6 +5,7 @@ import { chatRoute } from "./routes/chat.js";
 import { conversationsRoute } from "./routes/conversations.js";
 import { healthRoute } from "./routes/health.js";
 import { messagesRoute } from "./routes/messages.js";
+import { titleRoute } from "./routes/title.js";
 
 export function createApp() {
   const app = new Hono();
@@ -23,6 +24,7 @@ export function createApp() {
   app.route("/api/chat", chatRoute);
   app.route("/api/conversations", conversationsRoute);
   app.route("/api/conversations/:id/messages", messagesRoute);
+  app.route("/api/conversations/:id/title", titleRoute);
 
   app.onError((err, c) => {
     const status = "status" in err && typeof err.status === "number" ? err.status : 500;

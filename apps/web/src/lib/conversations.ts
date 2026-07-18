@@ -67,3 +67,23 @@ export function useDeleteConversation() {
     },
   }));
 }
+
+export function useUpdateTitle() {
+  const queryClient = useQueryClient();
+
+  return createMutation(() => ({
+    mutationFn: async ({ id, title }: { id: string; title?: string }) => {
+      const res = await fetch(`${apiBase}/api/conversations/${id}/title`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) throw new Error(`Failed to update title: ${res.status}`);
+      const json = (await res.json()) as { title: string };
+      return json.title;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  }));
+}
