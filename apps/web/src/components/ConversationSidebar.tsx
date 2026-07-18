@@ -115,7 +115,7 @@ export function ConversationSidebar(props: Props) {
 
   return (
     <aside class="sticky top-0 flex h-screen w-64 flex-col overflow-hidden border-r bg-muted/30">
-      <div class="flex shrink-0 flex-col gap-3 p-3">
+      <div class="flex shrink-0 flex-col gap-3 px-3 py-2">
         <Button variant="outline" class="w-full justify-start shrink-0" onClick={props.onNew}>
           <span class="mr-2">+</span> New chat
         </Button>
