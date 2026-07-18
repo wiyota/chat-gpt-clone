@@ -21,8 +21,7 @@ interface Props {
 
 function StreamingMessage(props: { content: string }) {
   return (
-    <div class="rounded-lg border bg-muted/50 p-4">
-      <div class="mb-1 text-xs font-medium text-muted-foreground uppercase">assistant</div>
+    <div class="max-w-[80%]">
       <div class="message-content">
         <MarkdownMessage content={props.content} />
       </div>
@@ -54,17 +53,6 @@ function shouldRender(message: Message): boolean {
   return true;
 }
 
-function messageBg(role: string) {
-  switch (role) {
-    case "user":
-      return "bg-primary text-primary-foreground";
-    case "assistant":
-      return "border bg-muted/50";
-    default:
-      return "border bg-card";
-  }
-}
-
 export function ChatPane(props: Props) {
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
@@ -86,19 +74,27 @@ export function ChatPane(props: Props) {
         </div>
       </Show>
 
-      <div class="flex-1 space-y-4 overflow-y-auto p-4">
+      <div class="flex-1 gap-6 overflow-y-auto p-4 [display:flex] [flex-direction:column]">
         <For each={props.messages()}>
           {(message) => (
             <Show when={shouldRender(message)} fallback={null}>
-              <div class={`rounded-lg p-4 ${messageBg(message.role)}`}>
-                <div class="mb-1 text-xs font-medium uppercase tracking-wide opacity-80">
-                  {message.role}
+              <Show
+                when={message.role === "user"}
+                fallback={
+                  <div class="max-w-[80%]">
+                    <ToolMarker message={message} />
+                    <div class="message-content">
+                      <MarkdownMessage content={message.content ?? ""} />
+                    </div>
+                  </div>
+                }
+              >
+                <div class="self-end max-w-[80%] rounded-lg bg-muted-foreground/20 px-4 py-2 text-foreground">
+                  <div class="message-content">
+                    <MarkdownMessage content={message.content ?? ""} />
+                  </div>
                 </div>
-                <ToolMarker message={message} />
-                <div class="message-content">
-                  <MarkdownMessage content={message.content ?? ""} />
-                </div>
-              </div>
+              </Show>
             </Show>
           )}
         </For>
