@@ -3,7 +3,7 @@ import type { Message } from "@chat/shared";
 import { loadMessages } from "../db/messages.js";
 import { insertSummary, loadSummary } from "../db/summaries.js";
 import { loadMemories } from "../db/memories.js";
-import { createLLMProvider } from "../llm/index.js";
+import type { LLMAdapter } from "../llm/provider.js";
 import { env } from "../env.js";
 
 const BASE_SYSTEM_PROMPT = "You are a helpful assistant. Answer concisely and clearly.";
@@ -12,9 +12,9 @@ export async function buildContext(
   supabase: SupabaseClient,
   conversationId: string,
   userId: string,
+  provider: LLMAdapter,
 ): Promise<Message[]> {
   const allMessages = await loadMessages(supabase, conversationId);
-  const provider = createLLMProvider();
   const budget = env.CONTEXT_WINDOW_TOKENS;
   const keepRecent = env.RECENT_MESSAGES_TO_KEEP;
 

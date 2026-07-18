@@ -12,6 +12,7 @@ import { insertUsage } from "../db/usage.js";
 import { loadMemories, insertMemory } from "../db/memories.js";
 import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
+import type { LLMAdapter } from "../llm/provider.js";
 import { extractFacts } from "../memory/extractFacts.js";
 import { checkDailyBudget } from "../usage/limit.js";
 import { getToolDefinitions, executeToolCall } from "../tools/registry.js";
@@ -35,7 +36,7 @@ const chatSchema = Type.Object({
 });
 
 async function persistFacts(
-  provider: ReturnType<typeof createLLMProvider>,
+  provider: LLMAdapter,
   supabase: ReturnType<typeof createUserClient>,
   userId: string,
   userText: string,
@@ -84,7 +85,7 @@ export const chatRoute = new Hono()
       await insertMessage(supabase, conversation.id, userMessage);
     }
 
-    const provider = createLLMProvider();
+    const provider = c.get("llmProvider") ?? createLLMProvider();
 
     // Extract facts in the background so streaming starts immediately.
     const factTask =
@@ -92,7 +93,7 @@ export const chatRoute = new Hono()
         ? persistFacts(provider, supabase, auth.userId, userMessage.content)
         : Promise.resolve();
 
-    const contextMessages = await buildContext(supabase, conversation.id, auth.userId);
+    const contextMessages = await buildContext(supabase, conversation.id, auth.userId, provider);
 
     const toolDefinitions = getToolDefinitions();
     const messagesForModel: Message[] = [...contextMessages];

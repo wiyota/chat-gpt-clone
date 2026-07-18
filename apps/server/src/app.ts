@@ -6,8 +6,9 @@ import { conversationsRoute } from "./routes/conversations.js";
 import { healthRoute } from "./routes/health.js";
 import { messagesRoute } from "./routes/messages.js";
 import { titleRoute } from "./routes/title.js";
+import type { LLMAdapter } from "./llm/provider.js";
 
-export function createApp() {
+export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
   const app = new Hono();
 
   app.use(
@@ -19,6 +20,13 @@ export function createApp() {
       credentials: true,
     }),
   );
+
+  app.use("/api/*", async (c, next) => {
+    if (options.llmProvider) {
+      c.set("llmProvider", options.llmProvider);
+    }
+    await next();
+  });
 
   app.route("/health", healthRoute);
   app.route("/api/chat", chatRoute);

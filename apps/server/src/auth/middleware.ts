@@ -1,5 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { createUserClient } from "../supabase/client.js";
+import type { LLMAdapter } from "../llm/provider.js";
 
 export interface AuthContext {
   userId: string;
@@ -35,5 +36,6 @@ export const authMiddleware = createMiddleware(async (c, next) => {
 declare module "hono" {
   interface ContextVariableMap {
     auth: AuthContext;
+    llmProvider: LLMAdapter;
   }
 }
