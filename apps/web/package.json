@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt \"src/**/*.{ts,tsx,js,jsx,mjs,cjs}\" \"e2e/**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
+    "format:check": "oxfmt --check \"src/**/*.{ts,tsx,js,jsx,mjs,cjs}\" \"e2e/**/*.{ts,tsx,js,jsx,mjs,cjs}\""
   },
   "dependencies": {
     "@chat/shared": "workspace:*",

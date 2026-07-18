@@ -7,11 +7,15 @@
     "dev": "pnpm --parallel -r dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint",
-    "format": "pnpm -r format"
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt \"**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
+    "format:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx,mjs,cjs}\""
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
     "typescript": "^7.0.2"
   }
 }

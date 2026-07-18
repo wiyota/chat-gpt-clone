@@ -63,7 +63,7 @@ function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled:
 export function ChatPane(props: Props) {
   const submitDisabled = () => props.isLoading || !!props.quotaError || !props.input.trim();
 
-  let scrollRef: HTMLDivElement | undefined;
+  let scrollRef: HTMLDivElement;
 
   const scrollToBottom = () => {
     if (scrollRef) {
@@ -93,7 +93,9 @@ export function ChatPane(props: Props) {
       </Show>
 
       <div
-        ref={scrollRef}
+        ref={(el) => {
+          scrollRef = el;
+        }}
         class="flex-1 gap-6 overflow-y-auto p-6 [display:flex] [flex-direction:column]"
       >
         <For each={props.messages()}>
