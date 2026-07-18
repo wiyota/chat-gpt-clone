@@ -13,7 +13,6 @@ const titleBodySchema = Type.Object({
 export const titleRoute = new Hono()
   .use(authMiddleware)
   .post("/", tbValidator("json", titleBodySchema), async (c) => {
-    const auth = c.get("auth");
     const id = c.req.param("id");
     if (!id) {
       return c.json({ error: "Conversation ID is required" }, 400);
