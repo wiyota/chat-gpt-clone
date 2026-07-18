@@ -265,6 +265,7 @@ export function App() {
           onSelect={handleSelect}
           onNew={handleNewChat}
           onDelete={handleDelete}
+          onRename={(id, title) => updateTitle.mutate({ id, title })}
           userEmail={user.data?.email}
           onSignOut={() => signOut.mutate()}
         />

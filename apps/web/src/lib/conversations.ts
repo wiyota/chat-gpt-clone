@@ -82,8 +82,14 @@ export function useUpdateTitle() {
       const json = (await res.json()) as { title: string };
       return json.title;
     },
-    onSuccess: () => {
+    onSuccess: (_title, variables) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.setQueryData(["conversations"], (old: Conversation[] | undefined) => {
+        if (!old) return old;
+        return old.map((c) =>
+          c.id === variables.id ? { ...c, title: variables.title ?? c.title } : c,
+        );
+      });
     },
   }));
 }

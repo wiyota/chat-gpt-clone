@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 import type { Conversation } from "@/lib/conversations.js";
 import { createColorMode } from "@/lib/color-mode.js";
 import { Button } from "@/components/ui/button.js";
@@ -9,6 +9,15 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu.js";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group.js";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog.js";
+import { TextField, TextFieldInput } from "@/components/ui/text-field.js";
 
 const AutoIcon = () => (
   <svg
@@ -71,12 +80,35 @@ interface Props {
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => void;
   userEmail?: string;
   onSignOut: () => void;
 }
 
 export function ConversationSidebar(props: Props) {
   const { preference, setMode } = createColorMode();
+  const [renameId, setRenameId] = createSignal<string | null>(null);
+  const [renameTitle, setRenameTitle] = createSignal("");
+
+  const openRename = (conversation: Conversation, e: MouseEvent) => {
+    e.stopPropagation();
+    setRenameId(conversation.id);
+    setRenameTitle(conversation.title);
+  };
+
+  const closeRename = () => {
+    setRenameId(null);
+    setRenameTitle("");
+  };
+
+  const submitRename = () => {
+    const id = renameId();
+    const title = renameTitle().trim();
+    if (id && title) {
+      props.onRename(id, title);
+    }
+    closeRename();
+  };
 
   return (
     <aside class="sticky top-0 flex h-screen w-64 flex-col overflow-hidden border-r bg-muted/30">
@@ -103,23 +135,73 @@ export function ConversationSidebar(props: Props) {
                   onClick={() => props.onSelect(conversation.id)}
                 >
                   <span class="truncate pr-2">{conversation.title}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      props.onDelete(conversation.id);
-                    }}
-                  >
-                    ×
-                  </Button>
+                  <DropdownMenu gutter={4}>
+                    <DropdownMenuTrigger
+                      as={Button}
+                      variant="ghost"
+                      size="icon"
+                      class="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="size-4"
+                      >
+                        <circle cx="12" cy="5" r="1" />
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="12" cy="19" r="1" />
+                      </svg>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="w-40">
+                      <DropdownMenuItem onClick={(e) => openRename(conversation, e as MouseEvent)}>
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        class="text-destructive focus:text-destructive focus:bg-destructive/10"
+                        onClick={(e) => {
+                          (e as MouseEvent).stopPropagation();
+                          props.onDelete(conversation.id);
+                        }}
+                      >
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </li>
               )}
             </For>
           </ul>
         </Show>
       </div>
+
+      <Dialog open={!!renameId()} onOpenChange={(open) => !open && closeRename()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename conversation</DialogTitle>
+          </DialogHeader>
+          <TextField class="grid gap-2">
+            <TextFieldInput
+              value={renameTitle()}
+              onInput={(e) => setRenameTitle(e.currentTarget.value)}
+              placeholder="Conversation title"
+            />
+          </TextField>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeRename}>
+              Cancel
+            </Button>
+            <Button onClick={submitRename} disabled={!renameTitle().trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div class="shrink-0">
         <DropdownMenu gutter={4}>
