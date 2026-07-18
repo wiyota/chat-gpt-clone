@@ -51,7 +51,18 @@ function shouldRender(message: Message): boolean {
   return true;
 }
 
+function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled: boolean) {
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const isMeta = isMac ? e.metaKey : e.ctrlKey;
+  if (e.key === "Enter" && isMeta && !disabled) {
+    e.preventDefault();
+    onSubmit(e);
+  }
+}
+
 export function ChatPane(props: Props) {
+  const submitDisabled = () => props.isLoading || !!props.quotaError || !props.input.trim();
+
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
       <header class="shrink-0 flex items-center justify-between border-b px-4 py-3">
@@ -99,6 +110,7 @@ export function ChatPane(props: Props) {
             <TextFieldTextArea
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}
+              onKeyDown={(e) => handleKeyDown(e, props.onSubmit, submitDisabled())}
               placeholder="Message..."
               rows={1}
               class="min-h-0 flex-1 resize-none border-0 bg-transparent px-2 py-1 leading-5 shadow-none focus-visible:ring-0"
