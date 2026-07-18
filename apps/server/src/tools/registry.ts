@@ -34,11 +34,10 @@ const registry = new Map<string, ToolExecutor>([
       definition: calculatorTool,
       execute: (args) => {
         const expression = String(args.expression ?? "");
-        if (!/^\d+\s*[-+*/\(\)\s\.]*\d+$/.test(expression)) {
+        if (!/^\d+\s*[-+*/()\s.]*\d+$/.test(expression)) {
           throw new Error("Invalid calculator expression");
         }
         // Safe math via Function with no access to globals.
-        // eslint-disable-next-line no-new-func
         const result = new Function(`return (${expression})`)();
         return String(result);
       },

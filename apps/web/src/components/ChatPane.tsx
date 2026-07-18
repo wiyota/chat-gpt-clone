@@ -94,16 +94,17 @@ export function ChatPane(props: Props) {
       </div>
 
       <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-4">
-        <div class="relative mx-auto max-w-4xl">
-          <TextField class="w-full">
+        <div class="mx-auto flex max-w-4xl items-end gap-1 rounded-[18px] border bg-muted p-1 shadow-xs">
+          <TextField class="flex-1 min-w-0">
             <TextFieldTextArea
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}
               placeholder="Message..."
               rows={1}
+              class="min-h-0 flex-1 resize-none border-0 bg-transparent px-2 py-1 leading-5 shadow-none focus-visible:ring-0"
             />
           </TextField>
-          <div class="absolute right-1.5 top-1/2 -translate-y-1/2">
+          <div class="pb-0">
             <Show
               when={props.isStreaming}
               fallback={
