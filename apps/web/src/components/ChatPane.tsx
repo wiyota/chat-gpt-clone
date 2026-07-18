@@ -64,7 +64,7 @@ export function ChatPane(props: Props) {
         </div>
       </Show>
 
-      <div class="flex-1 gap-6 overflow-y-auto p-4 [display:flex] [flex-direction:column]">
+      <div class="flex-1 gap-6 overflow-y-auto p-6 [display:flex] [flex-direction:column]">
         <For each={props.messages()}>
           {(message) => (
             <Show when={shouldRender(message)} fallback={null}>
