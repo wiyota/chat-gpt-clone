@@ -1,7 +1,8 @@
 import { env } from "../env.js";
 import OpenAI from "openai";
 import type { Message, StreamChunk } from "@chat/shared";
-import type { ChatResponse, LLMAdapter } from "./provider.js";
+import type { ChatResponse, LLMAdapter, ToolCallRequest, ToolTurnResponse } from "./provider.js";
+import type { ToolDefinition } from "../tools/definitions.js";
 import { countMessagesTokens } from "./tokenizer.js";
 
 export class OpenAIAdapter implements LLMAdapter {
@@ -26,6 +27,51 @@ export class OpenAIAdapter implements LLMAdapter {
       promptTokens: usage?.prompt_tokens ?? this.countTokens(messages),
       completionTokens:
         usage?.completion_tokens ?? this.countTokens([{ role: "assistant", content }]),
+    };
+  }
+
+  async chatWithTools(messages: Message[], tools: ToolDefinition[]): Promise<ToolTurnResponse> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: messages.map(toOpenAIMessage),
+      tools: tools.map((tool) => ({
+        type: "function" as const,
+        function: {
+          name: tool.function.name,
+          description: tool.function.description,
+          parameters: tool.function.parameters,
+        },
+      })),
+    });
+
+    const message = response.choices[0]?.message;
+    const functionCalls = message?.tool_calls?.filter(
+      (call): call is OpenAI.Chat.ChatCompletionMessageFunctionToolCall => call.type === "function",
+    );
+    if (functionCalls && functionCalls.length > 0) {
+      const toolCallRequest: ToolCallRequest = {
+        role: "assistant",
+        content: message.content ?? "",
+        tool_calls: functionCalls.map((call) => ({
+          id: call.id,
+          type: "function" as const,
+          function: {
+            name: call.function.name,
+            arguments: call.function.arguments,
+          },
+        })),
+      };
+      return { kind: "tool_calls", message: toolCallRequest };
+    }
+
+    const usage = response.usage;
+    return {
+      kind: "message",
+      content: message?.content ?? "",
+      promptTokens: usage?.prompt_tokens ?? this.countTokens(messages),
+      completionTokens:
+        usage?.completion_tokens ??
+        this.countTokens([{ role: "assistant", content: message?.content ?? "" }]),
     };
   }
 

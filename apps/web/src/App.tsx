@@ -114,6 +114,29 @@ export function App() {
       throw new Error(error);
     }
 
+    // The server may return a direct JSON response when the model answered without streaming.
+    const contentType = res.headers.get("Content-Type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await res.json()) as { content: string; conversationId?: string };
+      setLiveMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === "assistant") {
+          next[next.length - 1] = { ...last, content: body.content };
+        } else {
+          next.push({ role: "assistant", content: body.content });
+        }
+        return next;
+      });
+      if (body.conversationId) {
+        setActiveConversationId(body.conversationId);
+      }
+      await messagesQuery.refetch();
+      setLiveMessages([]);
+      setIsStreaming(false);
+      return { aborted: false };
+    }
+
     if (!res.body) throw new Error("No response body");
 
     const reader = res.body.getReader();
@@ -212,10 +235,6 @@ export function App() {
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     chat.mutate();
-  };
-
-  const clearQuotaError = () => {
-    setQuotaError(null);
   };
 
   return (

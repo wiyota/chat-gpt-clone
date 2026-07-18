@@ -51,12 +51,22 @@ body {
   background: #f9fafb;
 }
 
+.message.tool {
+  background: #fef3c7;
+}
+
 .message-role {
   font-size: 0.875rem;
   font-weight: 600;
   color: #6b7280;
   margin-bottom: 0.25rem;
   text-transform: capitalize;
+}
+
+.tool-calls {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
 }
 
 .message-content {

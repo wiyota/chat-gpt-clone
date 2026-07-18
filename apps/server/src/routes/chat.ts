@@ -14,6 +14,7 @@ import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
 import { extractFacts } from "../memory/extractFacts.js";
 import { checkDailyBudget } from "../usage/limit.js";
+import { getToolDefinitions, executeToolCall } from "../tools/registry.js";
 import { env } from "../env.js";
 
 const chatSchema = Type.Object({
@@ -76,11 +77,89 @@ export const chatRoute = new Hono()
       await insertMessage(supabase, conversation.id, userMessage);
     }
 
+    const provider = createLLMProvider();
+
+    // Extract facts in the background so streaming starts immediately.
+    const factTask =
+      userMessage?.role === "user"
+        ? persistFacts(provider, supabase, auth.userId, userMessage.content)
+        : Promise.resolve();
+
     const contextMessages = await buildContext(supabase, conversation.id, auth.userId);
 
-    const provider = createLLMProvider();
+    const toolDefinitions = getToolDefinitions();
+    const messagesForModel: Message[] = [...contextMessages];
+    let toolRounds = 0;
+    const maxToolRounds = 3;
+    let prebuiltAnswer: string | null = null;
+
+    while (toolRounds < maxToolRounds) {
+      const turn = await provider.chatWithTools(messagesForModel, toolDefinitions);
+      if (turn.kind === "message") {
+        prebuiltAnswer = turn.content;
+        messagesForModel.push({
+          role: "assistant",
+          content: turn.content,
+        });
+        break;
+      }
+
+      messagesForModel.push({
+        role: "assistant",
+        content: "",
+        tool_calls: turn.message.tool_calls,
+      });
+
+      for (const call of turn.message.tool_calls) {
+        const result = await executeToolCall({
+          id: call.id,
+          function: {
+            name: call.function.name,
+            arguments: call.function.arguments,
+          },
+        });
+        messagesForModel.push({
+          role: "tool",
+          content: result.content,
+          tool_call_id: result.tool_call_id,
+        });
+      }
+
+      toolRounds++;
+    }
+
+    // Persist the non-streaming assistant/tool exchange before the final stream.
+    for (const message of messagesForModel.slice(contextMessages.length)) {
+      if (message.role === "assistant" || message.role === "tool") {
+        await insertMessage(supabase, conversation.id, message);
+      }
+    }
+
+    // If the model already answered without needing further streaming, return it directly.
+    if (prebuiltAnswer) {
+      await factTask;
+      const promptTokens = provider.countTokens(messagesForModel);
+      const completionTokens = provider.countTokens([
+        { role: "assistant", content: prebuiltAnswer },
+      ]);
+      await insertUsage(adminSupabase, {
+        userId: auth.userId,
+        conversationId: conversation.id,
+        model: env.OPENAI_MODEL as string,
+        promptTokens,
+        completionTokens,
+      });
+
+      return c.json({
+        content: prebuiltAnswer,
+        conversationId: conversation.id,
+      });
+    }
+
+    const finalMessages: Message[] = [...messagesForModel];
+
     const estimatedTokens = provider.countTokens([
-      ...contextMessages,
+      ...finalMessages,
       userMessage ?? { role: "user", content: "" },
     ]);
 
@@ -104,16 +183,10 @@ export const chatRoute = new Hono()
       c.header("Content-Encoding", "identity");
 
       const signal = c.req.raw.signal;
-      const streamChunks = provider.chatStream(contextMessages, signal);
+      const streamChunks = provider.chatStream(finalMessages, signal);
 
       let fullContent = "";
       let aborted = false;
-
-      // Extract facts in the background so streaming starts immediately.
-      const factTask =
-        userMessage?.role === "user"
-          ? persistFacts(provider, supabase, auth.userId, userMessage.content)
-          : Promise.resolve();
 
       try {
         await stream.write(`data: conversationId:${conversation.id}\n\n`);
@@ -152,7 +225,7 @@ export const chatRoute = new Hono()
           await insertMessage(supabase, conversation.id, assistantMessage);
         }
 
-        const promptTokens = provider.countTokens(contextMessages);
+        const promptTokens = provider.countTokens(finalMessages);
         const completionTokens = provider.countTokens([
           { role: "assistant", content: fullContent },
         ]);

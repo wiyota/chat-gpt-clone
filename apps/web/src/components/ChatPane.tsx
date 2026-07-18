@@ -14,6 +14,30 @@ interface Props {
   onSignOut: () => void;
 }
 
+function ToolMarker(props: { message: Message }) {
+  return (
+    <Show when={props.message.tool_calls && props.message.tool_calls.length > 0}>
+      <div class="tool-calls">
+        Used tools:{" "}
+        {props.message.tool_calls
+          ?.map((call) => {
+            const fn = (call as { function?: { name?: string } }).function;
+            return fn?.name ?? "tool";
+          })
+          .join(", ")}
+      </div>
+    </Show>
+  );
+}
+
+function shouldRender(message: Message): boolean {
+  if (message.role === "tool") return false;
+  if (message.role === "assistant" && !message.content && !message.tool_calls?.length) {
+    return false;
+  }
+  return true;
+}
+
 export function ChatPane(props: Props) {
   return (
     <div class="chat-pane">
@@ -36,10 +60,13 @@ export function ChatPane(props: Props) {
       <div class="messages">
         <For each={props.messages()}>
           {(message) => (
-            <div class={`message ${message.role}`}>
-              <div class="message-role">{message.role}</div>
-              <div class="message-content">{message.content}</div>
-            </div>
+            <Show when={shouldRender(message)} fallback={null}>
+              <div class={`message ${message.role}`}>
+                <div class="message-role">{message.role}</div>
+                <ToolMarker message={message} />
+                <div class="message-content">{message.content}</div>
+              </div>
+            </Show>
           )}
         </For>
       </div>

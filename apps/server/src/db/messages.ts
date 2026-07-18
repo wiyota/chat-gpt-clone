@@ -6,6 +6,8 @@ export interface StoredMessage {
   conversation_id: string;
   role: Message["role"];
   content: string;
+  tool_calls?: unknown[];
+  tool_call_id?: string;
   created_at: string;
 }
 
@@ -20,6 +22,8 @@ export async function insertMessage(
       conversation_id: conversationId,
       role: message.role,
       content: message.content,
+      tool_calls: message.tool_calls,
+      tool_call_id: message.tool_call_id,
     })
     .select()
     .single();
@@ -38,7 +42,7 @@ export async function loadMessages(
 ): Promise<Message[]> {
   const { data, error } = await supabase
     .from("messages")
-    .select("role, content")
+    .select("role, content, tool_calls, tool_call_id")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
