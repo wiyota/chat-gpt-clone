@@ -30,6 +30,7 @@ export function App() {
   const [quotaError, setQuotaError] = createSignal<string | null>(null);
 
   const [generatingTitleForNewChat, setGeneratingTitleForNewChat] = createSignal(false);
+  const [focusInputTrigger, setFocusInputTrigger] = createSignal(0);
 
   const conversations = useConversations();
   const queryClient = useQueryClient();
@@ -267,6 +268,7 @@ export function App() {
     setInput("");
     setQuotaError(null);
     setGeneratingTitleForNewChat(false);
+    setFocusInputTrigger((n) => n + 1);
   };
 
   const handleSelect = (id: string) => {
@@ -276,6 +278,7 @@ export function App() {
     setStreamingContent("");
     setQuotaError(null);
     setGeneratingTitleForNewChat(false);
+    setFocusInputTrigger((n) => n + 1);
   };
 
   const handleDelete = (id: string) => {
@@ -330,6 +333,7 @@ export function App() {
           }}
           onSubmit={handleSubmit}
           onStop={handleStop}
+          focusTrigger={focusInputTrigger()}
         />
       </div>
     </Show>

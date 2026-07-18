@@ -1,4 +1,4 @@
-import { For, Show, createEffect, on } from "solid-js";
+import { For, Show, createEffect, on, onMount } from "solid-js";
 import type { Message } from "@chat/shared";
 import { MarkdownMessage } from "./MarkdownMessage.js";
 import { Button } from "@/components/ui/button.js";
@@ -15,6 +15,7 @@ interface Props {
   onInput: (value: string) => void;
   onSubmit: (e: Event) => void;
   onStop: () => void;
+  focusTrigger?: number;
 }
 
 function StreamingMessage(props: { content: string }) {
@@ -64,6 +65,7 @@ export function ChatPane(props: Props) {
   const submitDisabled = () => props.isLoading || !!props.quotaError || !props.input.trim();
 
   let scrollRef: HTMLDivElement;
+  let inputRef: HTMLTextAreaElement;
 
   const scrollToBottom = () => {
     if (scrollRef) {
@@ -79,6 +81,20 @@ export function ChatPane(props: Props) {
       },
     ),
   );
+
+  createEffect(
+    on(
+      () => props.focusTrigger,
+      () => {
+        inputRef?.focus();
+      },
+      { defer: true },
+    ),
+  );
+
+  onMount(() => {
+    inputRef?.focus();
+  });
 
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
@@ -130,6 +146,9 @@ export function ChatPane(props: Props) {
         <div class="mx-auto flex max-w-4xl items-end gap-1 rounded-[18px] border bg-muted p-1 shadow-xs">
           <TextField class="min-w-0 flex-1">
             <TextFieldTextArea
+              ref={(el) => {
+                inputRef = el;
+              }}
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}
               onKeyDown={(e) => handleKeyDown(e, props.onSubmit, submitDisabled())}
