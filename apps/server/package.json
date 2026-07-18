@@ -13,11 +13,11 @@
     "@chat/shared": "workspace:*",
     "@hono/node-server": "^2.0.8",
     "@hono/typebox-validator": "1.1.0",
-    "@sinclair/typebox": "0.34.50",
-    "@supabase/supabase-js": "2.45.4",
+    "@sinclair/typebox": "0.34.51",
+    "@supabase/supabase-js": "2.110.2",
     "dotenv": "^17.4.2",
     "hono": "^4.12.29",
-    "js-tiktoken": "^1.0.12",
+    "js-tiktoken": "^1.0.21",
     "openai": "^6.46.0"
   },
   "devDependencies": {
