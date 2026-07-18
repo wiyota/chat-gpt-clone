@@ -1,7 +1,7 @@
 import { env } from "../env.js";
 import OpenAI from "openai";
 import type { Message, StreamChunk } from "@chat/shared";
-import type { LLMAdapter } from "./provider.js";
+import type { ChatResponse, LLMAdapter } from "./provider.js";
 import { countMessagesTokens } from "./tokenizer.js";
 
 export class OpenAIAdapter implements LLMAdapter {
@@ -13,14 +13,20 @@ export class OpenAIAdapter implements LLMAdapter {
     this.model = env.OPENAI_MODEL as string;
   }
 
-  async chat(messages: Message[]): Promise<string> {
+  async chat(messages: Message[]): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
       model: this.model,
       messages: messages.map(toOpenAIMessage),
     });
 
     const content = response.choices[0]?.message?.content ?? "";
-    return content;
+    const usage = response.usage;
+    return {
+      content,
+      promptTokens: usage?.prompt_tokens ?? this.countTokens(messages),
+      completionTokens:
+        usage?.completion_tokens ?? this.countTokens([{ role: "assistant", content }]),
+    };
   }
 
   async *chatStream(messages: Message[], signal?: AbortSignal): AsyncIterable<StreamChunk> {
@@ -28,6 +34,7 @@ export class OpenAIAdapter implements LLMAdapter {
       model: this.model,
       messages: messages.map(toOpenAIMessage),
       stream: true,
+      stream_options: { include_usage: true },
     });
 
     for await (const chunk of stream) {

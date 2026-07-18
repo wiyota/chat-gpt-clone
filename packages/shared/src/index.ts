@@ -17,5 +17,5 @@ export interface ChatResponse {
 
 export interface StreamChunk {
   content: string;
-  done: boolean;
+  done?: boolean;
 }

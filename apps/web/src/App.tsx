@@ -24,6 +24,7 @@ export function App() {
   const [liveMessages, setLiveMessages] = createSignal<Message[]>([]);
   const [isStreaming, setIsStreaming] = createSignal(false);
   const [abortController, setAbortController] = createSignal<AbortController | null>(null);
+  const [quotaError, setQuotaError] = createSignal<string | null>(null);
 
   const conversations = useConversations();
   const messagesQuery = useConversationMessages(activeConversationId);
@@ -37,6 +38,8 @@ export function App() {
 
   const chat = createMutation(() => ({
     mutationFn: async () => {
+      setQuotaError(null);
+
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error("Not authenticated");
@@ -65,10 +68,15 @@ export function App() {
     onSuccess: () => {
       conversations.refetch();
     },
-    onError: () => {
+    onError: (err) => {
       setLiveMessages([]);
       setIsStreaming(false);
       setAbortController(null);
+
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("quota") || message.includes("429")) {
+        setQuotaError("Daily token budget exceeded. Please try again later.");
+      }
     },
   }));
 
@@ -99,7 +107,11 @@ export function App() {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? `Chat request failed: ${res.status}`);
+      const error = body.error ?? `Chat request failed: ${res.status}`;
+      if (res.status === 429 && body.code === "quota_exceeded") {
+        setQuotaError(error);
+      }
+      throw new Error(error);
     }
 
     if (!res.body) throw new Error("No response body");
@@ -180,12 +192,14 @@ export function App() {
     setPendingMessages([]);
     setLiveMessages([]);
     setInput("");
+    setQuotaError(null);
   };
 
   const handleSelect = (id: string) => {
     setActiveConversationId(id);
     setPendingMessages([]);
     setLiveMessages([]);
+    setQuotaError(null);
   };
 
   const handleDelete = (id: string) => {
@@ -198,6 +212,10 @@ export function App() {
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     chat.mutate();
+  };
+
+  const clearQuotaError = () => {
+    setQuotaError(null);
   };
 
   return (
@@ -228,7 +246,11 @@ export function App() {
           isLoading={chat.isPending || isStreaming()}
           isStreaming={isStreaming()}
           userEmail={user.data?.email}
-          onInput={setInput}
+          quotaError={quotaError()}
+          onInput={(value) => {
+            setInput(value);
+            if (value) setQuotaError(null);
+          }}
           onSubmit={handleSubmit}
           onStop={handleStop}
           onSignOut={() => signOut.mutate()}

@@ -5,11 +5,14 @@ import { stream } from "hono/streaming";
 import type { StreamingApi } from "hono/utils/stream";
 import type { ChatRequest, Message } from "@chat/shared";
 import { authMiddleware } from "../auth/middleware.js";
-import { createUserClient } from "../supabase/client.js";
+import { createUserClient, createAdminClient } from "../supabase/client.js";
 import { findOrCreateConversation } from "../db/conversations.js";
 import { insertMessage } from "../db/messages.js";
+import { insertUsage } from "../db/usage.js";
 import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
+import { checkDailyBudget } from "../usage/limit.js";
+import { env } from "../env.js";
 
 const chatSchema = Type.Object({
   messages: Type.Array(
@@ -38,6 +41,7 @@ export const chatRoute = new Hono()
 
     const token = c.req.header("Authorization")!.replace("Bearer ", "");
     const supabase = createUserClient(token);
+    const adminSupabase = createAdminClient();
 
     const conversation = await findOrCreateConversation(supabase, auth.userId, conversationId);
     if (!conversation) {
@@ -51,6 +55,25 @@ export const chatRoute = new Hono()
 
     const contextMessages = await buildContext(supabase, conversation.id);
 
+    const provider = createLLMProvider();
+    const estimatedTokens = provider.countTokens([
+      ...contextMessages,
+      userMessage ?? { role: "user", content: "" },
+    ]);
+
+    const budgetCheck = await checkDailyBudget(supabase, auth.userId, estimatedTokens);
+    if (!budgetCheck.allowed) {
+      return c.json(
+        {
+          error: "Daily token budget exceeded",
+          code: "quota_exceeded",
+          todayUsage: budgetCheck.todayUsage,
+          budget: budgetCheck.budget,
+        },
+        429,
+      );
+    }
+
     return stream(c, async (stream: StreamingApi) => {
       c.header("Content-Type", "text/event-stream");
       c.header("Cache-Control", "no-cache");
@@ -58,7 +81,6 @@ export const chatRoute = new Hono()
       c.header("Content-Encoding", "identity");
 
       const signal = c.req.raw.signal;
-      const provider = createLLMProvider();
       const streamChunks = provider.chatStream(contextMessages, signal);
 
       let fullContent = "";
@@ -100,6 +122,19 @@ export const chatRoute = new Hono()
           };
           await insertMessage(supabase, conversation.id, assistantMessage);
         }
+
+        const promptTokens = provider.countTokens(contextMessages);
+        const completionTokens = provider.countTokens([
+          { role: "assistant", content: fullContent },
+        ]);
+        await insertUsage(adminSupabase, {
+          userId: auth.userId,
+          conversationId: conversation.id,
+          model: env.OPENAI_MODEL as string,
+          promptTokens,
+          completionTokens,
+        });
+
         try {
           await stream.write(`data: conversationId:${conversation.id}\n\n`);
         } catch {

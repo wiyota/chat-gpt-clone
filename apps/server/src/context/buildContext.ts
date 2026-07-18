@@ -29,7 +29,7 @@ export async function buildContext(
 
   let summary = await loadSummary(supabase, conversationId);
   if (!summary) {
-    const summaryContent = await provider.chat([
+    const response = await provider.chat([
       {
         role: "system",
         content:
@@ -38,7 +38,7 @@ export async function buildContext(
       ...olderMessages,
     ]);
 
-    summary = await insertSummary(supabase, conversationId, summaryContent);
+    summary = await insertSummary(supabase, conversationId, response.content);
   }
 
   const context: Message[] = [];

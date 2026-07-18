@@ -11,10 +11,6 @@ FormatRegistry.Set("uri", (value) => {
   }
 });
 
-const IntegerFromString = Type.Transform(Type.Optional(Type.String()))
-  .Decode((value) => Number(value ?? "0"))
-  .Encode((value) => String(value));
-
 const envSchema = Type.Object({
   PORT: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => Number(value ?? "3000"))
@@ -31,6 +27,9 @@ const envSchema = Type.Object({
   RECENT_MESSAGES_TO_KEEP: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => Number(value ?? "6"))
     .Encode((value) => String(value)),
+  DAILY_TOKEN_BUDGET: Type.Transform(Type.Optional(Type.String()))
+    .Decode((value) => Number(value ?? "10000"))
+    .Encode((value) => String(value)),
 });
 
 export const env = Value.Decode(envSchema, {
@@ -43,4 +42,5 @@ export const env = Value.Decode(envSchema, {
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
   CONTEXT_WINDOW_TOKENS: process.env.CONTEXT_WINDOW_TOKENS ?? "4000",
   RECENT_MESSAGES_TO_KEEP: process.env.RECENT_MESSAGES_TO_KEEP ?? "6",
+  DAILY_TOKEN_BUDGET: process.env.DAILY_TOKEN_BUDGET ?? "10000",
 });

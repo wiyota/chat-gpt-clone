@@ -7,6 +7,7 @@ interface Props {
   isLoading: boolean;
   isStreaming: boolean;
   userEmail?: string;
+  quotaError?: string | null;
   onInput: (value: string) => void;
   onSubmit: (e: Event) => void;
   onStop: () => void;
@@ -27,6 +28,10 @@ export function ChatPane(props: Props) {
           </div>
         </Show>
       </div>
+
+      <Show when={props.quotaError}>
+        <div class="quota-error">{props.quotaError}</div>
+      </Show>
 
       <div class="messages">
         <For each={props.messages()}>
@@ -50,7 +55,11 @@ export function ChatPane(props: Props) {
         <Show
           when={props.isStreaming}
           fallback={
-            <button type="submit" disabled={props.isLoading} class="chat-button">
+            <button
+              type="submit"
+              disabled={props.isLoading || !!props.quotaError}
+              class="chat-button"
+            >
               {props.isLoading ? "..." : "Send"}
             </button>
           }
