@@ -154,7 +154,7 @@ export function ChatPane(props: Props) {
               onKeyDown={(e) => handleKeyDown(e, props.onSubmit, submitDisabled())}
               placeholder="Message..."
               rows={1}
-              class="min-h-0 flex-1 resize-none border-0 bg-transparent px-2 py-1 leading-5 shadow-none focus-visible:ring-0"
+              class="min-h-0 flex-1 resize-none border-0 bg-transparent px-3 py-1 leading-5 shadow-none focus-visible:ring-0"
             />
           </TextField>
           <div class="pb-0">
