@@ -103,25 +103,25 @@ export function ChatPane(props: Props) {
         </Show>
       </div>
 
-      <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background p-4">
-        <div class="mx-auto flex max-w-4xl items-end gap-2">
+      <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-3">
+        <div class="mx-auto flex max-w-4xl items-center gap-2">
           <TextField class="flex-1">
             <TextFieldTextArea
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}
               placeholder="Message..."
-              rows={2}
+              rows={1}
             />
           </TextField>
           <Show
             when={props.isStreaming}
             fallback={
-              <Button type="submit" disabled={props.isLoading || !!props.quotaError} class="h-10">
+              <Button type="submit" disabled={props.isLoading || !!props.quotaError} class="h-8">
                 {props.isLoading ? "..." : "Send"}
               </Button>
             }
           >
-            <Button type="button" variant="destructive" onClick={props.onStop} class="h-10">
+            <Button type="button" variant="destructive" onClick={props.onStop} class="h-8">
               Stop
             </Button>
           </Show>
