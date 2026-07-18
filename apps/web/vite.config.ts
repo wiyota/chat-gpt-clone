@@ -3,13 +3,7 @@ import solid from "vite-plugin-solid";
 
 export default defineConfig({
   plugins: [solid()],
-  server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-    },
+  optimizeDeps: {
+    include: ["marked", "dompurify"],
   },
 });

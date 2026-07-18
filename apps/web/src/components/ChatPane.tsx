@@ -1,8 +1,10 @@
 import { For, Show } from "solid-js";
 import type { Message } from "@chat/shared";
+import { MarkdownMessage } from "./MarkdownMessage.js";
 
 interface Props {
   messages: () => Message[];
+  streamingContent?: string;
   input: string;
   isLoading: boolean;
   isStreaming: boolean;
@@ -12,6 +14,17 @@ interface Props {
   onSubmit: (e: Event) => void;
   onStop: () => void;
   onSignOut: () => void;
+}
+
+function StreamingMessage(props: { content: string }) {
+  return (
+    <div class="message assistant">
+      <div class="message-role">assistant</div>
+      <div class="message-content">
+        <MarkdownMessage content={props.content} />
+      </div>
+    </div>
+  );
 }
 
 function ToolMarker(props: { message: Message }) {
@@ -64,11 +77,16 @@ export function ChatPane(props: Props) {
               <div class={`message ${message.role}`}>
                 <div class="message-role">{message.role}</div>
                 <ToolMarker message={message} />
-                <div class="message-content">{message.content}</div>
+                <div class="message-content">
+                  <MarkdownMessage content={message.content ?? ""} />
+                </div>
               </div>
             </Show>
           )}
         </For>
+        <Show when={props.isStreaming}>
+          <StreamingMessage content={props.streamingContent ?? ""} />
+        </Show>
       </div>
 
       <form onSubmit={props.onSubmit} class="chat-form">

@@ -14,11 +14,15 @@
     "@solidjs/router": "^0.16.1",
     "@supabase/supabase-js": "2.45.4",
     "@tanstack/solid-query": "^5.101.2",
+    "dompurify": "^3.4.11",
+    "marked": "^18.0.6",
     "solid-js": "^1.9.14"
   },
   "devDependencies": {
     "@playwright/test": "1.46.1",
     "@tanstack/solid-query-devtools": "^5.101.2",
+    "@types/dompurify": "^3.2.0",
+    "@types/marked": "^6.0.0",
     "playwright": "1.46.1",
     "typescript": "^7.0.2",
     "vite": "^8.1.4",

@@ -22,6 +22,7 @@ export function App() {
   const [input, setInput] = createSignal("");
   const [pendingMessages, setPendingMessages] = createSignal<Message[]>([]);
   const [liveMessages, setLiveMessages] = createSignal<Message[]>([]);
+  const [streamingContent, setStreamingContent] = createSignal("");
   const [isStreaming, setIsStreaming] = createSignal(false);
   const [abortController, setAbortController] = createSignal<AbortController | null>(null);
   const [quotaError, setQuotaError] = createSignal<string | null>(null);
@@ -31,6 +32,7 @@ export function App() {
   const deleteConversation = useDeleteConversation();
 
   const messages = () => {
+    if (isStreaming()) return liveMessages();
     if (liveMessages().length > 0) return liveMessages();
     if (activeConversationId() === undefined) return pendingMessages();
     return messagesQuery.data ?? [];
@@ -54,6 +56,7 @@ export function App() {
       setInput("");
       setPendingMessages([]);
       setLiveMessages(nextMessages);
+      setStreamingContent("");
       setIsStreaming(true);
 
       const controller = new AbortController();
@@ -70,6 +73,7 @@ export function App() {
     },
     onError: (err) => {
       setLiveMessages([]);
+      setStreamingContent("");
       setIsStreaming(false);
       setAbortController(null);
 
@@ -118,21 +122,19 @@ export function App() {
     const contentType = res.headers.get("Content-Type") ?? "";
     if (contentType.includes("application/json")) {
       const body = (await res.json()) as { content: string; conversationId?: string };
-      setLiveMessages((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last?.role === "assistant") {
-          next[next.length - 1] = { ...last, content: body.content };
-        } else {
-          next.push({ role: "assistant", content: body.content });
-        }
-        return next;
-      });
+      setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: "" }]);
+      setIsStreaming(true);
+      const text = body.content;
+      for (let i = 0; i < text.length; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 8));
+        setStreamingContent(text.slice(0, i + 1));
+      }
       if (body.conversationId) {
         setActiveConversationId(body.conversationId);
       }
       await messagesQuery.refetch();
       setLiveMessages([]);
+      setStreamingContent("");
       setIsStreaming(false);
       return { aborted: false };
     }
@@ -164,16 +166,7 @@ export function App() {
           }
 
           assistantContent += data;
-          setLiveMessages((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last?.role === "assistant") {
-              next[next.length - 1] = { ...last, content: assistantContent };
-            } else {
-              next.push({ role: "assistant", content: assistantContent });
-            }
-            return next;
-          });
+          setStreamingContent(assistantContent);
         }
       }
     } catch (err) {
@@ -192,6 +185,7 @@ export function App() {
 
     await messagesQuery.refetch();
     setLiveMessages([]);
+    setStreamingContent("");
     setIsStreaming(false);
     return { aborted: false };
   }
@@ -203,6 +197,7 @@ export function App() {
     }
     await messagesQuery.refetch();
     setLiveMessages([]);
+    setStreamingContent("");
     setIsStreaming(false);
   }
 
@@ -214,6 +209,7 @@ export function App() {
     setActiveConversationId(undefined);
     setPendingMessages([]);
     setLiveMessages([]);
+    setStreamingContent("");
     setInput("");
     setQuotaError(null);
   };
@@ -222,6 +218,7 @@ export function App() {
     setActiveConversationId(id);
     setPendingMessages([]);
     setLiveMessages([]);
+    setStreamingContent("");
     setQuotaError(null);
   };
 
@@ -261,6 +258,7 @@ export function App() {
         />
         <ChatPane
           messages={messages}
+          streamingContent={streamingContent()}
           input={input()}
           isLoading={chat.isPending || isStreaming()}
           isStreaming={isStreaming()}
