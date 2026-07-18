@@ -20,7 +20,7 @@
     "@chat/shared": "workspace:*",
     "@hono/node-server": "^2.0.8",
     "@hono/typebox-validator": "1.1.0",
-    "@sinclair/typebox": "0.34.51",
+    "@sinclair/typebox": "0.34.52",
     "@supabase/supabase-js": "2.110.2",
     "dotenv": "^17.4.2",
     "hono": "^4.12.29",
@@ -31,6 +31,6 @@
     "@types/node": "^26.1.1",
     "tsx": "^4.23.0",
     "typescript": "^7.0.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.10"
   }
 }
