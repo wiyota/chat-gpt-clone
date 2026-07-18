@@ -2,6 +2,7 @@ import { env } from "../env.js";
 import OpenAI from "openai";
 import type { Message, StreamChunk } from "@chat/shared";
 import type { LLMAdapter } from "./provider.js";
+import { countMessagesTokens } from "./tokenizer.js";
 
 export class OpenAIAdapter implements LLMAdapter {
   private client: OpenAI;
@@ -39,6 +40,10 @@ export class OpenAIAdapter implements LLMAdapter {
     }
 
     yield { content: "", done: true };
+  }
+
+  countTokens(messages: Message[]): number {
+    return countMessagesTokens(messages, this.model);
   }
 }
 

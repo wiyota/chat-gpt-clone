@@ -7,7 +7,8 @@ import type { ChatRequest, Message } from "@chat/shared";
 import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient } from "../supabase/client.js";
 import { findOrCreateConversation } from "../db/conversations.js";
-import { insertMessage, loadMessages } from "../db/messages.js";
+import { insertMessage } from "../db/messages.js";
+import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
 
 const chatSchema = Type.Object({
@@ -43,11 +44,12 @@ export const chatRoute = new Hono()
       return c.json({ error: "Failed to create or access conversation" }, 500);
     }
 
-    const history = await loadMessages(supabase, conversation.id);
     const userMessage = messages[messages.length - 1];
     if (userMessage) {
       await insertMessage(supabase, conversation.id, userMessage);
     }
+
+    const contextMessages = await buildContext(supabase, conversation.id);
 
     return stream(c, async (stream: StreamingApi) => {
       c.header("Content-Type", "text/event-stream");
@@ -57,7 +59,7 @@ export const chatRoute = new Hono()
 
       const signal = c.req.raw.signal;
       const provider = createLLMProvider();
-      const streamChunks = provider.chatStream([...history, ...messages], signal);
+      const streamChunks = provider.chatStream(contextMessages, signal);
 
       let fullContent = "";
       let aborted = false;

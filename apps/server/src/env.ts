@@ -11,6 +11,10 @@ FormatRegistry.Set("uri", (value) => {
   }
 });
 
+const IntegerFromString = Type.Transform(Type.Optional(Type.String()))
+  .Decode((value) => Number(value ?? "0"))
+  .Encode((value) => String(value));
+
 const envSchema = Type.Object({
   PORT: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => Number(value ?? "3000"))
@@ -21,6 +25,12 @@ const envSchema = Type.Object({
   OPENAI_MODEL: Type.Optional(Type.String()),
   LLM_PROVIDER: Type.Optional(Type.Union([Type.Literal("openai"), Type.Literal("anthropic")])),
   CORS_ORIGIN: Type.Optional(Type.String()),
+  CONTEXT_WINDOW_TOKENS: Type.Transform(Type.Optional(Type.String()))
+    .Decode((value) => Number(value ?? "4000"))
+    .Encode((value) => String(value)),
+  RECENT_MESSAGES_TO_KEEP: Type.Transform(Type.Optional(Type.String()))
+    .Decode((value) => Number(value ?? "6"))
+    .Encode((value) => String(value)),
 });
 
 export const env = Value.Decode(envSchema, {
@@ -31,4 +41,6 @@ export const env = Value.Decode(envSchema, {
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
   LLM_PROVIDER: process.env.LLM_PROVIDER ?? "openai",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
+  CONTEXT_WINDOW_TOKENS: process.env.CONTEXT_WINDOW_TOKENS ?? "4000",
+  RECENT_MESSAGES_TO_KEEP: process.env.RECENT_MESSAGES_TO_KEEP ?? "6",
 });

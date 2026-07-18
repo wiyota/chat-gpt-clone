@@ -38,6 +38,9 @@ importers:
       hono:
         specifier: ^4.12.29
         version: 4.12.29
+      js-tiktoken:
+        specifier: ^1.0.12
+        version: 1.0.21
       openai:
         specifier: ^6.46.0
         version: 6.46.0(ws@8.21.0)
@@ -688,6 +691,9 @@ packages:
       solid-js:
         optional: true
 
+  base64-js@1.5.1:
+    resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
+
   baseline-browser-mapping@2.10.42:
     resolution: {integrity: sha512-c/jurFrDLyui7o1J86yLkRu4LMsTYcBohveus7/I2Hzdn9KIP2bdJPTue/lR1KH46enoPbD77GKeSYNdyPoD3Q==}
     engines: {node: '>=6.0.0'}
@@ -773,6 +779,9 @@ packages:
   is-what@4.1.16:
     resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
     engines: {node: '>=12.13'}
+
+  js-tiktoken@1.0.21:
+    resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -1543,6 +1552,8 @@ snapshots:
     optionalDependencies:
       solid-js: 1.9.14
 
+  base64-js@1.5.1: {}
+
   baseline-browser-mapping@2.10.42: {}
 
   browserslist@4.28.5:
@@ -1619,6 +1630,10 @@ snapshots:
   html-entities@2.3.3: {}
 
   is-what@4.1.16: {}
+
+  js-tiktoken@1.0.21:
+    dependencies:
+      base64-js: 1.5.1
 
   js-tokens@4.0.0: {}
 
