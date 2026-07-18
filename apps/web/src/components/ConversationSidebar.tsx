@@ -220,7 +220,7 @@ export function ConversationSidebar(props: Props) {
           <DropdownMenuTrigger
             as={Button}
             variant="ghost"
-            class="w-full justify-start truncate px-5 py-6 text-sm font-normal text-foreground"
+            class="w-full justify-start truncate rounded-none px-5 py-6 text-sm font-normal text-foreground"
           >
             <span class="truncate">{props.userEmail ?? "User"}</span>
           </DropdownMenuTrigger>
