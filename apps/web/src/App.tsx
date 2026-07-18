@@ -1,15 +1,16 @@
 import { createSignal, Show } from "solid-js";
 import { createMutation } from "@tanstack/solid-query";
 import type { Message } from "@chat/shared";
-import { supabase } from "./lib/supabase.js";
-import { useSignInWithGoogle, useSignOut, useUser } from "./lib/auth.js";
+import { supabase } from "@/lib/supabase.js";
+import { useSignInWithGoogle, useSignOut, useUser } from "@/lib/auth.js";
 import {
   useConversations,
   useConversationMessages,
   useDeleteConversation,
-} from "./lib/conversations.js";
-import { ChatPane } from "./components/ChatPane.js";
-import { ConversationSidebar } from "./components/ConversationSidebar.js";
+} from "@/lib/conversations.js";
+import { ChatPane } from "@/components/ChatPane.js";
+import { ConversationSidebar } from "@/components/ConversationSidebar.js";
+import { Button } from "@/components/ui/button.js";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
@@ -118,7 +119,6 @@ export function App() {
       throw new Error(error);
     }
 
-    // The server may return a direct JSON response when the model answered without streaming.
     const contentType = res.headers.get("Content-Type") ?? "";
     if (contentType.includes("application/json")) {
       const body = (await res.json()) as { content: string; conversationId?: string };
@@ -238,17 +238,17 @@ export function App() {
     <Show
       when={user.data}
       fallback={
-        <div class="container">
-          <div class="card center">
-            <h1 class="title">ChatGPT Clone</h1>
-            <button class="chat-button" onClick={() => signIn.mutate()}>
+        <div class="flex min-h-screen items-center justify-center bg-muted/50 p-4">
+          <div class="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
+            <h1 class="mb-4 text-center text-2xl font-semibold">ChatGPT Clone</h1>
+            <Button class="w-full" onClick={() => signIn.mutate()} disabled={signIn.isPending}>
               Sign in with Google
-            </button>
+            </Button>
           </div>
         </div>
       }
     >
-      <div class="layout">
+      <div class="flex min-h-screen bg-background">
         <ConversationSidebar
           conversations={conversations.data ?? []}
           activeId={activeConversationId()}
