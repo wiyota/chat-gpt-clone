@@ -13,41 +13,26 @@ import { ConversationSidebar } from "./components/ConversationSidebar.js";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-async function postChat(
-  messages: Message[],
-  conversationId: string | undefined,
-  token: string
-): Promise<{ content: string; conversationId?: string }> {
-  const res = await fetch(`${apiBase}/api/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ messages, conversationId }),
-  });
-  if (!res.ok) throw new Error(`Chat request failed: ${res.status}`);
-  return res.json();
-}
-
 export function App() {
   const user = useUser();
   const signIn = useSignInWithGoogle();
   const signOut = useSignOut();
 
-  const [activeConversationId, setActiveConversationId] = createSignal<
-    string | undefined
-  >();
+  const [activeConversationId, setActiveConversationId] = createSignal<string | undefined>();
   const [input, setInput] = createSignal("");
   const [pendingMessages, setPendingMessages] = createSignal<Message[]>([]);
+  const [liveMessages, setLiveMessages] = createSignal<Message[]>([]);
+  const [isStreaming, setIsStreaming] = createSignal(false);
+  const [abortController, setAbortController] = createSignal<AbortController | null>(null);
 
   const conversations = useConversations();
   const messagesQuery = useConversationMessages(activeConversationId);
   const deleteConversation = useDeleteConversation();
 
   const messages = () => {
-    const loaded = messagesQuery.data ?? [];
-    return activeConversationId() === undefined ? pendingMessages() : loaded;
+    if (liveMessages().length > 0) return liveMessages();
+    if (activeConversationId() === undefined) return pendingMessages();
+    return messagesQuery.data ?? [];
   };
 
   const chat = createMutation(() => ({
@@ -63,31 +48,144 @@ export function App() {
       const currentMessages = messages();
       const nextMessages = [...currentMessages, userMessage];
 
-      if (activeConversationId() === undefined) {
-        setPendingMessages(nextMessages);
-      }
       setInput("");
+      setPendingMessages([]);
+      setLiveMessages(nextMessages);
+      setIsStreaming(true);
 
-      return postChat(nextMessages, activeConversationId(), token);
-    },
-    onSuccess: (data) => {
-      if (data.conversationId) {
-        setActiveConversationId(data.conversationId);
-        setPendingMessages([]);
+      const controller = new AbortController();
+      setAbortController(controller);
+
+      try {
+        return await streamChat(nextMessages, activeConversationId(), token, controller.signal);
+      } finally {
+        setAbortController(null);
       }
+    },
+    onSuccess: () => {
       conversations.refetch();
     },
+    onError: () => {
+      setLiveMessages([]);
+      setIsStreaming(false);
+      setAbortController(null);
+    },
   }));
+
+  async function streamChat(
+    messages: Message[],
+    conversationId: string | undefined,
+    token: string,
+    signal: AbortSignal,
+  ) {
+    let res: Response;
+    try {
+      res = await fetch(`${apiBase}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messages, conversationId }),
+        signal,
+      });
+    } catch (err) {
+      if (signal.aborted) {
+        await showPersistedMessages();
+        return { aborted: true };
+      }
+      throw err;
+    }
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? `Chat request failed: ${res.status}`);
+    }
+
+    if (!res.body) throw new Error("No response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantContent = "";
+    let finalConversationId: string | undefined;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6);
+
+          if (data === "[DONE]") continue;
+          if (data === "[ERROR]") {
+            throw new Error("Stream failed on server");
+          }
+          if (data.startsWith("conversationId:")) {
+            finalConversationId = data.slice("conversationId:".length);
+            continue;
+          }
+
+          assistantContent += data;
+          setLiveMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.role === "assistant") {
+              next[next.length - 1] = { ...last, content: assistantContent };
+            } else {
+              next.push({ role: "assistant", content: assistantContent });
+            }
+            return next;
+          });
+        }
+      }
+    } catch (err) {
+      if (signal.aborted) {
+        await showPersistedMessages(finalConversationId);
+        return { aborted: true };
+      }
+      throw err;
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (finalConversationId) {
+      setActiveConversationId(finalConversationId);
+    }
+
+    await messagesQuery.refetch();
+    setLiveMessages([]);
+    setIsStreaming(false);
+    return { aborted: false };
+  }
+
+  async function showPersistedMessages(fallbackId?: string) {
+    const id = fallbackId ?? activeConversationId();
+    if (id && !activeConversationId()) {
+      setActiveConversationId(id);
+    }
+    await messagesQuery.refetch();
+    setLiveMessages([]);
+    setIsStreaming(false);
+  }
+
+  const handleStop = () => {
+    abortController()?.abort();
+  };
 
   const handleNewChat = () => {
     setActiveConversationId(undefined);
     setPendingMessages([]);
+    setLiveMessages([]);
     setInput("");
   };
 
   const handleSelect = (id: string) => {
     setActiveConversationId(id);
     setPendingMessages([]);
+    setLiveMessages([]);
   };
 
   const handleDelete = (id: string) => {
@@ -125,12 +223,14 @@ export function App() {
           onDelete={handleDelete}
         />
         <ChatPane
-          messages={messages()}
+          messages={messages}
           input={input()}
-          isLoading={chat.isPending}
+          isLoading={chat.isPending || isStreaming()}
+          isStreaming={isStreaming()}
           userEmail={user.data?.email}
           onInput={setInput}
           onSubmit={handleSubmit}
+          onStop={handleStop}
           onSignOut={() => signOut.mutate()}
         />
       </div>

@@ -22,7 +22,7 @@ export class OpenAIAdapter implements LLMAdapter {
     return content;
   }
 
-  async *chatStream(messages: Message[]): AsyncIterable<StreamChunk> {
+  async *chatStream(messages: Message[], signal?: AbortSignal): AsyncIterable<StreamChunk> {
     const stream = await this.client.chat.completions.create({
       model: this.model,
       messages: messages.map(toOpenAIMessage),
@@ -30,7 +30,11 @@ export class OpenAIAdapter implements LLMAdapter {
     });
 
     for await (const chunk of stream) {
+      if (signal?.aborted) break;
       const content = chunk.choices[0]?.delta?.content ?? "";
+      if (content) {
+        console.log("[OpenAI chunk]", JSON.stringify(content));
+      }
       yield { content, done: false };
     }
 

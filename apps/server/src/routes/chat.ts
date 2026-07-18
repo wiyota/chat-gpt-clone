@@ -1,6 +1,8 @@
 import { tbValidator } from "@hono/typebox-validator";
 import { Type } from "@sinclair/typebox";
 import { Hono } from "hono";
+import { stream } from "hono/streaming";
+import type { StreamingApi } from "hono/utils/stream";
 import type { ChatRequest, Message } from "@chat/shared";
 import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient } from "../supabase/client.js";
@@ -20,7 +22,7 @@ const chatSchema = Type.Object({
       content: Type.String(),
       tool_calls: Type.Optional(Type.Array(Type.Unknown())),
       tool_call_id: Type.Optional(Type.String()),
-    })
+    }),
   ),
   conversationId: Type.Optional(Type.String()),
 });
@@ -36,11 +38,7 @@ export const chatRoute = new Hono()
     const token = c.req.header("Authorization")!.replace("Bearer ", "");
     const supabase = createUserClient(token);
 
-    const conversation = await findOrCreateConversation(
-      supabase,
-      auth.userId,
-      conversationId
-    );
+    const conversation = await findOrCreateConversation(supabase, auth.userId, conversationId);
     if (!conversation) {
       return c.json({ error: "Failed to create or access conversation" }, 500);
     }
@@ -51,11 +49,60 @@ export const chatRoute = new Hono()
       await insertMessage(supabase, conversation.id, userMessage);
     }
 
-    const provider = createLLMProvider();
-    const content = await provider.chat([...history, ...messages]);
+    return stream(c, async (stream: StreamingApi) => {
+      c.header("Content-Type", "text/event-stream");
+      c.header("Cache-Control", "no-cache");
+      c.header("X-Accel-Buffering", "no");
+      c.header("Content-Encoding", "identity");
 
-    const assistantMessage: Message = { role: "assistant", content };
-    await insertMessage(supabase, conversation.id, assistantMessage);
+      const signal = c.req.raw.signal;
+      const provider = createLLMProvider();
+      const streamChunks = provider.chatStream([...history, ...messages], signal);
 
-    return c.json({ content, conversationId: conversation.id });
+      let fullContent = "";
+      let aborted = false;
+
+      try {
+        await stream.write(`data: conversationId:${conversation.id}\n\n`);
+      } catch {
+        // Client disconnected before the stream started.
+        return;
+      }
+
+      try {
+        for await (const chunk of streamChunks) {
+          if (signal.aborted) {
+            aborted = true;
+            break;
+          }
+          if (chunk.content) {
+            fullContent += chunk.content;
+            await stream.write(`data: ${chunk.content}\n\n`);
+          }
+        }
+        if (!aborted) {
+          await stream.write("data: [DONE]\n\n");
+        }
+      } catch (err) {
+        console.error("streaming error:", err);
+        try {
+          await stream.write("data: [ERROR]\n\n");
+        } catch {
+          // Client already disconnected.
+        }
+      } finally {
+        if (fullContent) {
+          const assistantMessage: Message = {
+            role: "assistant",
+            content: fullContent,
+          };
+          await insertMessage(supabase, conversation.id, assistantMessage);
+        }
+        try {
+          await stream.write(`data: conversationId:${conversation.id}\n\n`);
+        } catch {
+          // Client already disconnected.
+        }
+      }
+    });
   });
