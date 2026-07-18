@@ -7,7 +7,7 @@ test("sign-in page renders", async ({ page }) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
 
-  await page.goto("http://localhost:5173/");
+  await page.goto("/");
   await expect(page.locator("text=ChatGPT Clone").first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator("text=Sign in with Google").first()).toBeVisible({ timeout: 5000 });
 

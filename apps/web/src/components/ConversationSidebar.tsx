@@ -145,10 +145,13 @@ export function ConversationSidebar(props: Props) {
                     when={!props.loadingIds?.has(conversation.id)}
                     fallback={<Skeleton class="h-4 w-3/4" />}
                   >
-                    <span class="truncate pr-2">{conversation.title}</span>
+                    <span class="truncate pr-2" data-testid="conversation-title">
+                      {conversation.title}
+                    </span>
                   </Show>
                   <DropdownMenu gutter={4}>
                     <DropdownMenuTrigger
+                      data-testid="conversation-settings"
                       as={Button}
                       variant="ghost"
                       size="icon"
@@ -175,6 +178,7 @@ export function ConversationSidebar(props: Props) {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        data-testid="delete-conversation"
                         class="text-destructive focus:bg-destructive/10 focus:text-destructive"
                         onClick={(e) => {
                           (e as MouseEvent).stopPropagation();

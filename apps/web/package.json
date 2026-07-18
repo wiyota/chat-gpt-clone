@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt \"src/**/*.{ts,tsx,js,jsx,mjs,cjs}\" \"e2e/**/*.{ts,tsx,js,jsx,mjs,cjs}\"",

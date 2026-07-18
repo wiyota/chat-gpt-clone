@@ -3,7 +3,6 @@ import type { Message } from "@chat/shared";
 import { MarkdownMessage } from "./MarkdownMessage.js";
 import { Button } from "@/components/ui/button.js";
 import { Badge } from "@/components/ui/badge.js";
-import { TextField, TextFieldTextArea } from "@/components/ui/text-field.js";
 
 interface Props {
   messages: () => Message[];
@@ -97,7 +96,7 @@ export function ChatPane(props: Props) {
   });
 
   return (
-    <div class="flex h-screen flex-1 flex-col overflow-hidden">
+    <div data-testid="chat-pane" class="flex h-screen flex-1 flex-col overflow-hidden">
       <header class="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <h1 class="text-lg font-semibold">ChatGPT Clone</h1>
       </header>
@@ -144,19 +143,18 @@ export function ChatPane(props: Props) {
 
       <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-4">
         <div class="mx-auto flex max-w-4xl items-end gap-1 rounded-[18px] border bg-muted p-1 shadow-xs">
-          <TextField class="min-w-0 flex-1">
-            <TextFieldTextArea
-              ref={(el) => {
-                inputRef = el;
-              }}
-              value={props.input}
-              onInput={(e) => props.onInput(e.currentTarget.value)}
-              onKeyDown={(e) => handleKeyDown(e, props.onSubmit, submitDisabled())}
-              placeholder="Message..."
-              rows={1}
-              class="min-h-0 flex-1 resize-none border-0 bg-transparent px-3 py-1 leading-5 shadow-none focus-visible:ring-0"
-            />
-          </TextField>
+          <textarea
+            data-testid="chat-input"
+            ref={(el) => {
+              inputRef = el;
+            }}
+            value={props.input}
+            onInput={(e) => props.onInput(e.currentTarget.value)}
+            onKeyDown={(e) => handleKeyDown(e, props.onSubmit, submitDisabled())}
+            placeholder="Message..."
+            rows={1}
+            class="min-h-0 flex-1 resize-none border-0 bg-transparent px-3 py-1 leading-5 shadow-none focus-visible:ring-0"
+          />
           <div class="pb-0">
             <Show
               when={props.isStreaming}

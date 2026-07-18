@@ -3,6 +3,20 @@ import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import type { Message } from "@chat/shared";
 import { supabase } from "@/lib/supabase.js";
 import { useSignInWithGoogle, useSignOut, useUser } from "@/lib/auth.js";
+
+function getTestAccessToken(): string | undefined {
+  if (!import.meta.env.DEV) return undefined;
+  return window.localStorage.getItem("__test_auth_token") ?? undefined;
+}
+
+async function getAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) return token;
+  const testToken = getTestAccessToken();
+  if (testToken) return testToken;
+  throw new Error("Not authenticated");
+}
 import {
   useConversations,
   useConversationMessages,
@@ -58,9 +72,7 @@ export function App() {
         setGeneratingTitleForNewChat(true);
       }
 
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error("Not authenticated");
+      const token = await getAccessToken();
 
       const text = input().trim();
       if (!text) throw new Error("Empty message");
