@@ -12,6 +12,7 @@ export async function findOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
   conversationId?: string,
+  initialTitle?: string,
 ): Promise<Conversation | null> {
   if (conversationId) {
     const { data, error } = await supabase
@@ -32,7 +33,7 @@ export async function findOrCreateConversation(
     .from("conversations")
     .insert({
       user_id: userId,
-      title: "New conversation",
+      title: initialTitle ? initialTitle.slice(0, 50) : "New conversation",
     })
     .select()
     .single();

@@ -67,12 +67,19 @@ export const chatRoute = new Hono()
     const supabase = createUserClient(token);
     const adminSupabase = createAdminClient();
 
-    const conversation = await findOrCreateConversation(supabase, auth.userId, conversationId);
+    const userMessage = messages[messages.length - 1];
+    const initialTitle = userMessage?.content.slice(0, 50);
+
+    const conversation = await findOrCreateConversation(
+      supabase,
+      auth.userId,
+      conversationId,
+      initialTitle,
+    );
     if (!conversation) {
       return c.json({ error: "Failed to create or access conversation" }, 500);
     }
 
-    const userMessage = messages[messages.length - 1];
     if (userMessage) {
       await insertMessage(supabase, conversation.id, userMessage);
     }

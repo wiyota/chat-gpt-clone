@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog.js";
 import { TextField, TextFieldInput } from "@/components/ui/text-field.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 
 const AutoIcon = () => (
   <svg
@@ -77,6 +78,8 @@ const MoonIcon = () => (
 interface Props {
   conversations: Conversation[];
   activeId?: string;
+  loadingIds?: Set<string>;
+  showNewChatSkeleton?: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
@@ -120,10 +123,15 @@ export function ConversationSidebar(props: Props) {
 
       <div class="flex-1 overflow-y-auto border-y p-2 px-3">
         <Show
-          when={props.conversations.length > 0}
+          when={props.conversations.length > 0 || props.showNewChatSkeleton}
           fallback={<p class="px-2 text-sm text-muted-foreground">No conversations yet</p>}
         >
           <ul class="flex flex-col gap-1 pb-3">
+            <Show when={props.showNewChatSkeleton}>
+              <li class="flex items-center rounded-md px-2 py-1.5">
+                <Skeleton class="h-4 w-3/4" />
+              </li>
+            </Show>
             <For each={props.conversations}>
               {(conversation) => (
                 <li
@@ -134,7 +142,12 @@ export function ConversationSidebar(props: Props) {
                   }`}
                   onClick={() => props.onSelect(conversation.id)}
                 >
-                  <span class="truncate pr-2">{conversation.title}</span>
+                  <Show
+                    when={!props.loadingIds?.has(conversation.id)}
+                    fallback={<Skeleton class="h-4 w-3/4" />}
+                  >
+                    <span class="truncate pr-2">{conversation.title}</span>
+                  </Show>
                   <DropdownMenu gutter={4}>
                     <DropdownMenuTrigger
                       as={Button}

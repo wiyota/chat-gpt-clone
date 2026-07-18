@@ -1,5 +1,5 @@
 import { createSignal, Show } from "solid-js";
-import { createMutation } from "@tanstack/solid-query";
+import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import type { Message } from "@chat/shared";
 import { supabase } from "@/lib/supabase.js";
 import { useSignInWithGoogle, useSignOut, useUser } from "@/lib/auth.js";
@@ -29,10 +29,17 @@ export function App() {
   const [abortController, setAbortController] = createSignal<AbortController | null>(null);
   const [quotaError, setQuotaError] = createSignal<string | null>(null);
 
+  const [generatingTitleForNewChat, setGeneratingTitleForNewChat] = createSignal(false);
+
   const conversations = useConversations();
+  const queryClient = useQueryClient();
   const messagesQuery = useConversationMessages(activeConversationId);
   const deleteConversation = useDeleteConversation();
   const updateTitle = useUpdateTitle();
+
+  const displayConversations = () => {
+    return conversations.data ?? [];
+  };
 
   const messages = () => {
     if (isStreaming()) return liveMessages();
@@ -44,6 +51,11 @@ export function App() {
   const chat = createMutation(() => ({
     mutationFn: async () => {
       setQuotaError(null);
+
+      const isNewChat = activeConversationId() === undefined;
+      if (isNewChat) {
+        setGeneratingTitleForNewChat(true);
+      }
 
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -72,14 +84,45 @@ export function App() {
       }
     },
     onSuccess: (result) => {
+      const conversationId = result?.conversationId;
+      if (!conversationId) {
+        setGeneratingTitleForNewChat(false);
+        return;
+      }
+
+      // Optimistically insert the new conversation with a draft title so the
+      // sidebar never shows "New conversation" for a freshly started chat.
+      queryClient.setQueryData(
+        ["conversations"],
+        (
+          old: { id: string; title: string; created_at: string; updated_at: string }[] | undefined,
+        ) => {
+          const exists = old?.some((c) => c.id === conversationId);
+          if (exists) return old;
+          const userMessage = messages().find((m: Message) => m.role === "user");
+          const draftTitle = userMessage?.content.slice(0, 40) || "New conversation";
+          const now = new Date().toISOString();
+          const inserted = [
+            {
+              id: conversationId,
+              title: draftTitle,
+              created_at: now,
+              updated_at: now,
+            },
+            ...(old ?? []),
+          ];
+          return inserted;
+        },
+      );
+
+      // Once the conversation appears in the list (from cache or refetch), hide
+      // the top-level skeleton so we don't render two rows for the same chat.
+      setGeneratingTitleForNewChat(false);
+
       conversations.refetch();
 
-      const conversationId = result?.conversationId;
-      if (conversationId && !result?.aborted) {
-        const conversation = conversations.data?.find((c) => c.id === conversationId);
-        if (!conversation || conversation.title === "New conversation") {
-          updateTitle.mutate({ id: conversationId });
-        }
+      if (!result?.aborted) {
+        updateTitle.mutate({ id: conversationId });
       }
     },
     onError: (err) => {
@@ -87,6 +130,7 @@ export function App() {
       setStreamingContent("");
       setIsStreaming(false);
       setAbortController(null);
+      setGeneratingTitleForNewChat(false);
 
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes("quota") || message.includes("429")) {
@@ -222,6 +266,7 @@ export function App() {
     setStreamingContent("");
     setInput("");
     setQuotaError(null);
+    setGeneratingTitleForNewChat(false);
   };
 
   const handleSelect = (id: string) => {
@@ -230,6 +275,7 @@ export function App() {
     setLiveMessages([]);
     setStreamingContent("");
     setQuotaError(null);
+    setGeneratingTitleForNewChat(false);
   };
 
   const handleDelete = (id: string) => {
@@ -260,8 +306,10 @@ export function App() {
     >
       <div class="flex min-h-screen bg-background">
         <ConversationSidebar
-          conversations={conversations.data ?? []}
+          conversations={displayConversations()}
           activeId={activeConversationId()}
+          loadingIds={new Set<string>()}
+          showNewChatSkeleton={generatingTitleForNewChat()}
           onSelect={handleSelect}
           onNew={handleNewChat}
           onDelete={handleDelete}
