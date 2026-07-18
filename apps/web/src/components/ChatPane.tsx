@@ -11,12 +11,10 @@ interface Props {
   input: string;
   isLoading: boolean;
   isStreaming: boolean;
-  userEmail?: string;
   quotaError?: string | null;
   onInput: (value: string) => void;
   onSubmit: (e: Event) => void;
   onStop: () => void;
-  onSignOut: () => void;
 }
 
 function StreamingMessage(props: { content: string }) {
@@ -58,14 +56,6 @@ export function ChatPane(props: Props) {
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
       <header class="shrink-0 flex items-center justify-between border-b px-4 py-3">
         <h1 class="text-lg font-semibold">ChatGPT Clone</h1>
-        <Show when={props.userEmail}>
-          <div class="flex items-center gap-3 text-sm text-muted-foreground">
-            <span>{props.userEmail}</span>
-            <Button variant="outline" size="sm" onClick={props.onSignOut}>
-              Sign out
-            </Button>
-          </div>
-        </Show>
       </header>
 
       <Show when={props.quotaError}>
@@ -111,7 +101,6 @@ export function ChatPane(props: Props) {
               onInput={(e) => props.onInput(e.currentTarget.value)}
               placeholder="Message..."
               rows={1}
-              class="pr-11"
             />
           </TextField>
           <div class="absolute right-1.5 top-1/2 -translate-y-1/2">

@@ -255,6 +255,8 @@ export function App() {
           onSelect={handleSelect}
           onNew={handleNewChat}
           onDelete={handleDelete}
+          userEmail={user.data?.email}
+          onSignOut={() => signOut.mutate()}
         />
         <ChatPane
           messages={messages}
@@ -262,7 +264,6 @@ export function App() {
           input={input()}
           isLoading={chat.isPending || isStreaming()}
           isStreaming={isStreaming()}
-          userEmail={user.data?.email}
           quotaError={quotaError()}
           onInput={(value) => {
             setInput(value);
@@ -270,7 +271,6 @@ export function App() {
           }}
           onSubmit={handleSubmit}
           onStop={handleStop}
-          onSignOut={() => signOut.mutate()}
         />
       </div>
     </Show>
