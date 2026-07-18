@@ -6,6 +6,8 @@ import { loadMemories } from "../db/memories.js";
 import { createLLMProvider } from "../llm/index.js";
 import { env } from "../env.js";
 
+const BASE_SYSTEM_PROMPT = "You are a helpful assistant. Answer concisely and clearly.";
+
 export async function buildContext(
   supabase: SupabaseClient,
   conversationId: string,
@@ -18,9 +20,17 @@ export async function buildContext(
 
   const memories = await loadMemories(supabase, userId, env.MEMORY_MAX_FACTS);
 
+  const context: Message[] = [{ role: "system", content: BASE_SYSTEM_PROMPT }];
+
+  const memoryMessage = buildMemoryMessage(memories);
+  if (memoryMessage) {
+    context.push(memoryMessage);
+  }
+
   const totalTokens = provider.countTokens(allMessages);
   if (totalTokens <= budget) {
-    return prependMemories(allMessages, memories);
+    context.push(...allMessages);
+    return context;
   }
 
   // Keep the most recent turns verbatim; summarize everything before them.
@@ -28,7 +38,8 @@ export async function buildContext(
   const olderMessages = allMessages.slice(0, -keepRecent);
 
   if (olderMessages.length === 0) {
-    return prependMemories(allMessages, memories);
+    context.push(...allMessages);
+    return context;
   }
 
   let summary = await loadSummary(supabase, conversationId);
@@ -45,25 +56,23 @@ export async function buildContext(
     summary = await insertSummary(supabase, conversationId, response.content);
   }
 
-  const context: Message[] = [];
   if (summary?.content) {
     context.push({
       role: "system",
       content: `Summary of earlier conversation:\n${summary.content}`,
     });
   }
+
   context.push(...recentMessages);
-  return prependMemories(context, memories);
+  return context;
 }
 
-function prependMemories(messages: Message[], memories: { fact: string }[]): Message[] {
-  if (memories.length === 0) return messages;
+function buildMemoryMessage(memories: { fact: string }[]): Message | null {
+  if (memories.length === 0) return null;
 
   const memoryText = memories.map((m) => `- ${m.fact}`).join("\n");
-  const memoryMessage: Message = {
+  return {
     role: "system",
     content: `You know the following about the user:\n${memoryText}`,
   };
-
-  return [memoryMessage, ...messages];
 }
