@@ -67,8 +67,8 @@ function messageBg(role: string) {
 
 export function ChatPane(props: Props) {
   return (
-    <div class="flex flex-1 flex-col overflow-hidden">
-      <header class="flex items-center justify-between border-b px-4 py-3">
+    <div class="flex h-screen flex-1 flex-col overflow-hidden">
+      <header class="shrink-0 flex items-center justify-between border-b px-4 py-3">
         <h1 class="text-lg font-semibold">ChatGPT Clone</h1>
         <Show when={props.userEmail}>
           <div class="flex items-center gap-3 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export function ChatPane(props: Props) {
       </header>
 
       <Show when={props.quotaError}>
-        <div class="mx-4 mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <div class="shrink-0 mx-4 mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {props.quotaError}
         </div>
       </Show>
@@ -107,8 +107,8 @@ export function ChatPane(props: Props) {
         </Show>
       </div>
 
-      <form onSubmit={props.onSubmit} class="border-t p-4">
-        <div class="flex max-w-4xl items-end gap-2 mx-auto">
+      <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background p-4">
+        <div class="mx-auto flex max-w-4xl items-end gap-2">
           <TextField class="flex-1">
             <TextFieldTextArea
               value={props.input}

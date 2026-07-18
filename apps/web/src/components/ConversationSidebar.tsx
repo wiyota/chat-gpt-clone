@@ -13,18 +13,18 @@ interface Props {
 
 export function ConversationSidebar(props: Props) {
   return (
-    <aside class="flex w-64 flex-col gap-3 border-r bg-muted/30 p-3">
-      <Button variant="outline" class="w-full justify-start" onClick={props.onNew}>
+    <aside class="sticky top-0 flex h-screen w-64 flex-col gap-3 overflow-hidden border-r bg-muted/30 p-3">
+      <Button variant="outline" class="w-full justify-start shrink-0" onClick={props.onNew}>
         <span class="mr-2">+</span> New chat
       </Button>
 
-      <Separator />
+      <Separator class="shrink-0" />
 
       <Show
         when={props.conversations.length > 0}
         fallback={<p class="px-2 text-sm text-muted-foreground">No conversations yet</p>}
       >
-        <ul class="flex flex-1 flex-col gap-1 overflow-y-auto">
+        <ul class="flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
           <For each={props.conversations}>
             {(conversation) => (
               <li
@@ -39,7 +39,7 @@ export function ConversationSidebar(props: Props) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  class="h-6 w-6 opacity-0 group-hover:opacity-100"
+                  class="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     props.onDelete(conversation.id);
