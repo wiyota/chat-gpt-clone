@@ -30,6 +30,9 @@ const envSchema = Type.Object({
   DAILY_TOKEN_BUDGET: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => Number(value ?? "10000"))
     .Encode((value) => String(value)),
+  MEMORY_MAX_FACTS: Type.Transform(Type.Optional(Type.String()))
+    .Decode((value) => Number(value ?? "10"))
+    .Encode((value) => String(value)),
 });
 
 export const env = Value.Decode(envSchema, {
@@ -43,4 +46,5 @@ export const env = Value.Decode(envSchema, {
   CONTEXT_WINDOW_TOKENS: process.env.CONTEXT_WINDOW_TOKENS ?? "4000",
   RECENT_MESSAGES_TO_KEEP: process.env.RECENT_MESSAGES_TO_KEEP ?? "6",
   DAILY_TOKEN_BUDGET: process.env.DAILY_TOKEN_BUDGET ?? "10000",
+  MEMORY_MAX_FACTS: process.env.MEMORY_MAX_FACTS ?? "10",
 });

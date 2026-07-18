@@ -9,8 +9,10 @@ import { createUserClient, createAdminClient } from "../supabase/client.js";
 import { findOrCreateConversation } from "../db/conversations.js";
 import { insertMessage } from "../db/messages.js";
 import { insertUsage } from "../db/usage.js";
+import { loadMemories, insertMemory } from "../db/memories.js";
 import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
+import { extractFacts } from "../memory/extractFacts.js";
 import { checkDailyBudget } from "../usage/limit.js";
 import { env } from "../env.js";
 
@@ -30,6 +32,27 @@ const chatSchema = Type.Object({
   ),
   conversationId: Type.Optional(Type.String()),
 });
+
+async function persistFacts(
+  provider: ReturnType<typeof createLLMProvider>,
+  supabase: ReturnType<typeof createUserClient>,
+  userId: string,
+  userText: string,
+): Promise<void> {
+  try {
+    const existingMemories = await loadMemories(supabase, userId, env.MEMORY_MAX_FACTS);
+    const existingFacts = new Set(existingMemories.map((m) => m.fact));
+    const facts = await extractFacts(provider, userText);
+    for (const fact of facts) {
+      if (!existingFacts.has(fact)) {
+        await insertMemory(supabase, userId, fact);
+        existingFacts.add(fact);
+      }
+    }
+  } catch (err) {
+    console.error("persistFacts error:", err);
+  }
+}
 
 export const chatRoute = new Hono()
   .use(authMiddleware)
@@ -53,7 +76,7 @@ export const chatRoute = new Hono()
       await insertMessage(supabase, conversation.id, userMessage);
     }
 
-    const contextMessages = await buildContext(supabase, conversation.id);
+    const contextMessages = await buildContext(supabase, conversation.id, auth.userId);
 
     const provider = createLLMProvider();
     const estimatedTokens = provider.countTokens([
@@ -85,6 +108,12 @@ export const chatRoute = new Hono()
 
       let fullContent = "";
       let aborted = false;
+
+      // Extract facts in the background so streaming starts immediately.
+      const factTask =
+        userMessage?.role === "user"
+          ? persistFacts(provider, supabase, auth.userId, userMessage.content)
+          : Promise.resolve();
 
       try {
         await stream.write(`data: conversationId:${conversation.id}\n\n`);
@@ -134,6 +163,8 @@ export const chatRoute = new Hono()
           promptTokens,
           completionTokens,
         });
+
+        await factTask;
 
         try {
           await stream.write(`data: conversationId:${conversation.id}\n\n`);

@@ -2,21 +2,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@chat/shared";
 import { loadMessages } from "../db/messages.js";
 import { insertSummary, loadSummary } from "../db/summaries.js";
+import { loadMemories } from "../db/memories.js";
 import { createLLMProvider } from "../llm/index.js";
 import { env } from "../env.js";
 
 export async function buildContext(
   supabase: SupabaseClient,
   conversationId: string,
+  userId: string,
 ): Promise<Message[]> {
   const allMessages = await loadMessages(supabase, conversationId);
   const provider = createLLMProvider();
   const budget = env.CONTEXT_WINDOW_TOKENS;
   const keepRecent = env.RECENT_MESSAGES_TO_KEEP;
 
+  const memories = await loadMemories(supabase, userId, env.MEMORY_MAX_FACTS);
+
   const totalTokens = provider.countTokens(allMessages);
   if (totalTokens <= budget) {
-    return allMessages;
+    return prependMemories(allMessages, memories);
   }
 
   // Keep the most recent turns verbatim; summarize everything before them.
@@ -24,7 +28,7 @@ export async function buildContext(
   const olderMessages = allMessages.slice(0, -keepRecent);
 
   if (olderMessages.length === 0) {
-    return allMessages;
+    return prependMemories(allMessages, memories);
   }
 
   let summary = await loadSummary(supabase, conversationId);
@@ -49,5 +53,17 @@ export async function buildContext(
     });
   }
   context.push(...recentMessages);
-  return context;
+  return prependMemories(context, memories);
+}
+
+function prependMemories(messages: Message[], memories: { fact: string }[]): Message[] {
+  if (memories.length === 0) return messages;
+
+  const memoryText = memories.map((m) => `- ${m.fact}`).join("\n");
+  const memoryMessage: Message = {
+    role: "system",
+    content: `You know the following about the user:\n${memoryText}`,
+  };
+
+  return [memoryMessage, ...messages];
 }
