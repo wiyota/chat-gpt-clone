@@ -15,7 +15,7 @@ export const Separator = <T extends ValidComponent = "hr">(props: SeparatorProps
     <SeparatorPrimitive
       data-slot="separator"
       class={cx(
-        "bg-border shrink-0 border-none data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
+        "shrink-0 border-none bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
         props.class,
       )}
       {...rest}

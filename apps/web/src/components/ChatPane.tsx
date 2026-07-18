@@ -82,12 +82,12 @@ export function ChatPane(props: Props) {
 
   return (
     <div class="flex h-screen flex-1 flex-col overflow-hidden">
-      <header class="shrink-0 flex items-center justify-between border-b px-4 py-3">
+      <header class="flex shrink-0 items-center justify-between border-b px-4 py-3">
         <h1 class="text-lg font-semibold">ChatGPT Clone</h1>
       </header>
 
       <Show when={props.quotaError}>
-        <div class="shrink-0 mx-4 mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <div class="mx-4 mt-4 shrink-0 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {props.quotaError}
         </div>
       </Show>
@@ -96,7 +96,7 @@ export function ChatPane(props: Props) {
         ref={(el) => {
           scrollRef = el;
         }}
-        class="flex-1 gap-6 overflow-y-auto p-6 [display:flex] [flex-direction:column]"
+        class="[display:flex] flex-1 [flex-direction:column] gap-6 overflow-y-auto p-6"
       >
         <For each={props.messages()}>
           {(message) => (
@@ -112,7 +112,7 @@ export function ChatPane(props: Props) {
                   </div>
                 }
               >
-                <div class="self-end max-w-[80%] rounded-lg bg-muted-foreground/20 px-5 py-2 text-foreground">
+                <div class="max-w-[80%] self-end rounded-lg bg-muted-foreground/20 px-5 py-2 text-foreground">
                   <div class="message-content">
                     <MarkdownMessage content={message.content ?? ""} />
                   </div>
@@ -128,7 +128,7 @@ export function ChatPane(props: Props) {
 
       <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-4">
         <div class="mx-auto flex max-w-4xl items-end gap-1 rounded-[18px] border bg-muted p-1 shadow-xs">
-          <TextField class="flex-1 min-w-0">
+          <TextField class="min-w-0 flex-1">
             <TextFieldTextArea
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}

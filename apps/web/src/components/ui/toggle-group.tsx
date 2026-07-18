@@ -36,7 +36,7 @@ export const ToggleGroupItem = <T extends ValidComponent = "button">(
       data-slot="toggle-group-item"
       class={cx(
         "inline-flex flex-1 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors",
-        "data-[selected]:bg-muted-foreground/30 data-[selected]:text-foreground aria-pressed:bg-muted-foreground/30 aria-pressed:text-foreground",
+        "aria-pressed:bg-muted-foreground/30 aria-pressed:text-foreground data-[selected]:bg-muted-foreground/30 data-[selected]:text-foreground",
         "hover:bg-muted-foreground/10 hover:text-foreground",
         props.class,
       )}

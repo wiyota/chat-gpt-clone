@@ -33,10 +33,10 @@ export const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       data-slot="text-field-input"
       class={cx(
-        "placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        "file:text-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium",
+        "flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
+        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
+        "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
         props.class,
       )}
       {...rest}
@@ -57,9 +57,9 @@ export const TextFieldTextArea = <T extends ValidComponent = "textarea">(
     <TextFieldPrimitive.TextArea
       data-slot="text-field-textarea"
       class={cx(
-        "placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input field-sizing-content flex min-h-9 max-h-60 w-full rounded-[18px] border bg-transparent px-4 py-2 pr-11 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        "flex field-sizing-content max-h-60 min-h-9 w-full resize-none rounded-[18px] border border-input bg-transparent px-4 py-2 pr-11 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
         props.class,
       )}
       {...rest}

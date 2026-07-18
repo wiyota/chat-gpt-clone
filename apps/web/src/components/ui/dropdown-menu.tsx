@@ -42,7 +42,7 @@ export const DropdownMenuContent = <T extends ValidComponent = "div">(
     <DropdownMenuPrimitive.Content
       data-slot="dropdown-menu-content"
       class={cx(
-        "bg-popover text-popover-foreground z-50 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md outline-none",
+        "z-50 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none",
         props.class,
       )}
       {...rest}
@@ -66,7 +66,7 @@ export const DropdownMenuItem = <T extends ValidComponent = "div">(
       data-slot="dropdown-menu-item"
       data-inset={props.inset}
       class={cx(
-        "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8",
+        "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[inset]:pl-8",
         props.class,
       )}
       {...rest}
@@ -86,7 +86,7 @@ export const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      class={cx("bg-border -mx-1 my-1 h-px", props.class)}
+      class={cx("-mx-1 my-1 h-px bg-border", props.class)}
       {...rest}
     />
   );

@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["oxlint-tailwindcss"],
+  "settings": {
+    "tailwindcss": {
+      "entryPoint": "apps/web/src/index.css"
+    }
+  },
+  "rules": {
+    "tailwindcss/enforce-sort-order": "warn"
+  }
+}

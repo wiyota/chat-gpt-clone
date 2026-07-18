@@ -115,7 +115,7 @@ export function ConversationSidebar(props: Props) {
   return (
     <aside class="sticky top-0 flex h-screen w-64 flex-col overflow-hidden border-r bg-muted/30">
       <div class="flex shrink-0 flex-col gap-3 px-3 py-2">
-        <Button variant="outline" class="w-full justify-start shrink-0" onClick={props.onNew}>
+        <Button variant="outline" class="w-full shrink-0 justify-start" onClick={props.onNew}>
           <span class="mr-2">+</span> New chat
         </Button>
       </div>
@@ -175,7 +175,7 @@ export function ConversationSidebar(props: Props) {
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        class="text-destructive focus:text-destructive focus:bg-destructive/10"
+                        class="text-destructive focus:bg-destructive/10 focus:text-destructive"
                         onClick={(e) => {
                           (e as MouseEvent).stopPropagation();
                           props.onDelete(conversation.id);
@@ -232,15 +232,15 @@ export function ConversationSidebar(props: Props) {
                 orientation="horizontal"
                 class="w-full p-0"
               >
-                <ToggleGroupItem value="auto" class="py-2 rounded-r-none">
+                <ToggleGroupItem value="auto" class="rounded-r-none py-2">
                   <AutoIcon />
                 </ToggleGroupItem>
                 <div class="w-px bg-border" />
-                <ToggleGroupItem value="light" class="py-2 rounded-none">
+                <ToggleGroupItem value="light" class="rounded-none py-2">
                   <SunIcon />
                 </ToggleGroupItem>
                 <div class="w-px bg-border" />
-                <ToggleGroupItem value="dark" class="py-2 rounded-l-none">
+                <ToggleGroupItem value="dark" class="rounded-l-none py-2">
                   <MoonIcon />
                 </ToggleGroupItem>
               </ToggleGroup>

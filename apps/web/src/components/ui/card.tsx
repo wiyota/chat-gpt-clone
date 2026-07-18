@@ -12,7 +12,7 @@ export const Card = (props: CardProps) => {
     <div
       data-slot="card"
       class={cx(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
         props.class,
       )}
       {...rest}
@@ -52,7 +52,7 @@ export const CardDescription = (props: CardDescriptionProps) => {
   return (
     <div
       data-slot="card-description"
-      class={cx("text-muted-foreground text-sm", props.class)}
+      class={cx("text-sm text-muted-foreground", props.class)}
       {...rest}
     />
   );

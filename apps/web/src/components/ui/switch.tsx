@@ -22,9 +22,9 @@ export const SwitchControl = <T extends ValidComponent = "div">(props: SwitchCon
     <SwitchPrimitive.Control
       data-slot="switch-control"
       class={cx(
-        "bg-input inline-flex h-4.5 w-8 items-center rounded-full border border-transparent shadow-xs transition-all",
+        "inline-flex h-4.5 w-8 items-center rounded-full border border-transparent bg-input shadow-xs transition-all",
         "data-[checked]:bg-primary",
-        "peer-focus-visible/switch-input:border-ring peer-focus-visible/switch-input:ring-ring/50 peer-focus-visible/switch-input:ring-[3px]",
+        "peer-focus-visible/switch-input:border-ring peer-focus-visible/switch-input:ring-[3px] peer-focus-visible/switch-input:ring-ring/50",
         "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
         props.class,
       )}
@@ -44,8 +44,8 @@ export const SwitchThumb = <T extends ValidComponent = "div">(props: SwitchThumb
     <SwitchPrimitive.Thumb
       data-slot="switch-thumb"
       class={cx(
-        "bg-background dark:bg-foreground pointer-events-none size-4 rounded-full transition-transform data-[checked]:translate-x-[calc(100%-2px)]",
-        "dark:data-[checked]:bg-primary-foreground dark:bg-foreground",
+        "pointer-events-none size-4 rounded-full bg-background transition-transform data-[checked]:translate-x-[calc(100%-2px)] dark:bg-foreground",
+        "dark:bg-foreground dark:data-[checked]:bg-primary-foreground",
         props.class,
       )}
       {...rest}
