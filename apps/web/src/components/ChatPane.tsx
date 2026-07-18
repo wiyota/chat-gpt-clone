@@ -103,28 +103,65 @@ export function ChatPane(props: Props) {
         </Show>
       </div>
 
-      <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-3">
-        <div class="mx-auto flex max-w-4xl items-center gap-2">
-          <TextField class="flex-1">
+      <form onSubmit={props.onSubmit} class="shrink-0 border-t bg-background px-4 py-4">
+        <div class="relative mx-auto max-w-4xl">
+          <TextField class="w-full">
             <TextFieldTextArea
               value={props.input}
               onInput={(e) => props.onInput(e.currentTarget.value)}
               placeholder="Message..."
               rows={1}
+              class="pr-11"
             />
           </TextField>
-          <Show
-            when={props.isStreaming}
-            fallback={
-              <Button type="submit" disabled={props.isLoading || !!props.quotaError} class="h-8">
-                {props.isLoading ? "..." : "Send"}
+          <div class="absolute right-1.5 top-1/2 -translate-y-1/2">
+            <Show
+              when={props.isStreaming}
+              fallback={
+                <Button
+                  type="submit"
+                  disabled={props.isLoading || !!props.quotaError || !props.input.trim()}
+                  size="icon"
+                  class="size-7 rounded-full disabled:bg-muted-foreground/30 disabled:text-muted-foreground"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="size-4"
+                  >
+                    <path d="M12 19V5" />
+                    <path d="m5 12 7-7 7 7" />
+                  </svg>
+                </Button>
+              }
+            >
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                onClick={props.onStop}
+                class="size-7 rounded-full"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="size-4"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
               </Button>
-            }
-          >
-            <Button type="button" variant="destructive" onClick={props.onStop} class="h-8">
-              Stop
-            </Button>
-          </Show>
+            </Show>
+          </div>
         </div>
       </form>
     </div>
