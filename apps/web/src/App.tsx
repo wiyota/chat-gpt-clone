@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { batch, createSignal, Show } from "solid-js";
 import { createMutation, useQueryClient } from "@tanstack/solid-query";
 import type { Message } from "@chat/shared";
 import { supabase } from "@/lib/supabase.js";
@@ -198,14 +198,16 @@ export function App() {
     if (contentType.includes("application/json")) {
       const body = (await res.json()) as { content: string; conversationId?: string };
       const text = body.content;
-      setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: text }]);
-      setStreamingContent("");
+      setStreamingContent(text);
       if (body.conversationId) {
         setActiveConversationId(body.conversationId);
       }
       await messagesQuery.refetch();
-      setLiveMessages([]);
-      setIsStreaming(false);
+      batch(() => {
+        setLiveMessages([]);
+        setStreamingContent("");
+        setIsStreaming(false);
+      });
       return { aborted: false, conversationId: body.conversationId };
     }
 
@@ -263,13 +265,14 @@ export function App() {
       setActiveConversationId(finalConversationId);
     }
 
-    // Persist the streamed assistant message so it remains visible while the
-    // persisted messages query refreshes.
-    setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: assistantContent }]);
-    setStreamingContent("");
-    setIsStreaming(false);
+    // Keep rendering the streaming message until the persisted query has the
+    // assistant response. This avoids a transient duplicate/empty handoff.
     await messagesQuery.refetch();
-    setLiveMessages([]);
+    batch(() => {
+      setLiveMessages([]);
+      setStreamingContent("");
+      setIsStreaming(false);
+    });
     return { aborted: false, conversationId: finalConversationId };
   }
 
