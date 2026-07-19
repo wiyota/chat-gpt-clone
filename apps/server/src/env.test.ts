@@ -38,7 +38,7 @@ describe("env schema", () => {
     const { env } = await loadEnv();
     expect(env.OPENAI_MODEL).toBe("gpt-4o-mini");
     expect(env.LLM_PROVIDER).toBe("openai");
-    expect(env.CORS_ORIGIN).toBe("*");
+    expect(env.CORS_ORIGIN).toBe("http://localhost:5173");
   });
 
   it("parses numeric variables with defaults", async () => {

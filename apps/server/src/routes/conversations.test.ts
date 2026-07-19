@@ -8,42 +8,56 @@ vi.mock("../supabase/client.js", () => ({
 
 import { createUserClient } from "../supabase/client.js";
 
+function createMockClient(options: MockClientOptions = {}) {
+  const conversationsBuilder = {
+    select: vi.fn(() => conversationsBuilder),
+    eq: vi.fn(() => conversationsBuilder),
+    order: vi.fn(() =>
+      Promise.resolve({ data: options.listData ?? [], error: options.listError ?? null }),
+    ),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve({
+        data: options.ownedConversationId ? { id: options.ownedConversationId } : null,
+        error: null,
+      }),
+    ),
+    delete: vi.fn(() => conversationsBuilder),
+    // oxlint-disable-next-line unicorn/no-thenable
+    then: vi.fn((onFulfilled: (value: unknown) => unknown) =>
+      Promise.resolve({ data: null, error: options.deleteError ?? null }).then(onFulfilled),
+    ),
+  };
+
+  return {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: {
+          user: {
+            id: "user-1",
+            email: "test@example.com",
+            app_metadata: {},
+            user_metadata: {},
+            aud: "authenticated",
+            created_at: new Date().toISOString(),
+          } as User,
+        },
+        error: null,
+      })),
+    },
+    from: vi.fn((table: string) => {
+      if (table === "conversations") return conversationsBuilder;
+      return conversationsBuilder;
+    }),
+  } as unknown as ReturnType<typeof createUserClient>;
+}
+
 describe("conversationsRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  function mockClient({ listData, listError, deleteError }: MockClientOptions) {
-    const mockedCreateUserClient = vi.mocked(createUserClient);
-    mockedCreateUserClient.mockReturnValue({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: {
-            user: {
-              id: "user-1",
-              email: "test@example.com",
-              app_metadata: {},
-              user_metadata: {},
-              aud: "authenticated",
-              created_at: new Date().toISOString(),
-            } as User,
-          },
-          error: null,
-        })),
-      },
-      from: vi.fn((_table: string) => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: listData, error: listError })),
-          })),
-        })),
-        delete: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => Promise.resolve({ error: deleteError })),
-          })),
-        })),
-      })) as unknown as ReturnType<typeof createUserClient>["from"],
-    } as unknown as ReturnType<typeof createUserClient>);
+  function mockClient(options: MockClientOptions = {}) {
+    vi.mocked(createUserClient).mockReturnValue(createMockClient(options));
   }
 
   it("lists conversations for the authenticated user", async () => {
@@ -78,7 +92,7 @@ describe("conversationsRoute", () => {
   });
 
   it("deletes a conversation", async () => {
-    mockClient({});
+    mockClient({ ownedConversationId: "1" });
     const res = await conversationsRoute.request("/1", {
       method: "DELETE",
       headers: { Authorization: "Bearer token" },
@@ -87,8 +101,18 @@ describe("conversationsRoute", () => {
     expect(await res.json()).toEqual({ success: true });
   });
 
+  it("returns 404 when deleting a conversation that does not belong to the user", async () => {
+    mockClient({ ownedConversationId: null });
+    const res = await conversationsRoute.request("/1", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer token" },
+    });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Conversation not found or access denied" });
+  });
+
   it("returns 500 when deleting a conversation fails", async () => {
-    mockClient({ deleteError: new Error("db error") });
+    mockClient({ ownedConversationId: "1", deleteError: new Error("db error") });
     const res = await conversationsRoute.request("/1", {
       method: "DELETE",
       headers: { Authorization: "Bearer token" },
@@ -102,4 +126,5 @@ interface MockClientOptions {
   listData?: unknown[];
   listError?: Error | null;
   deleteError?: Error | null;
+  ownedConversationId?: string | null;
 }

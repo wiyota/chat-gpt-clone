@@ -36,11 +36,17 @@ export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
 
   app.onError((err, c) => {
     const status = "status" in err && typeof err.status === "number" ? err.status : 500;
-    const message = err instanceof Error ? err.message : "Internal server error";
+    const safeStatus = status >= 400 && status < 600 ? status : 500;
+
+    // Only expose internal error details in development/test environments.
+    // In production, return a generic message to avoid leaking implementation
+    // details, stack traces, or potentially sensitive configuration values.
+    const isDevelopment =
+      env.E2E || !process.env.NODE_ENV || process.env.NODE_ENV === "development";
+    const message = isDevelopment && err instanceof Error ? err.message : "Internal server error";
 
     console.error(err);
 
-    const safeStatus = status >= 400 && status < 600 ? status : 500;
     return c.json({ error: message }, safeStatus as Parameters<typeof c.json>[1]);
   });
 

@@ -57,6 +57,76 @@ function createMockSupabase(
   } = {},
 ) {
   const user = options.user ?? { id: "user-1", email: "test@example.com" };
+  const thenResult = { data: null, error: null };
+
+  function createBuilder(finals: Record<string, () => Promise<unknown>> = {}) {
+    const builder = {
+      select: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      single: vi.fn(() => Promise.resolve({ data: null, error: { code: "PGRST116" } })),
+      maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: { code: "PGRST116" } })),
+      insert: vi.fn(() => builder),
+      update: vi.fn(() => builder),
+      delete: vi.fn(() => builder),
+      gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      // oxlint-disable-next-line unicorn/no-thenable
+      then: vi.fn((onFulfilled: (value: unknown) => unknown) =>
+        Promise.resolve(thenResult).then(onFulfilled),
+      ),
+      ...finals,
+    };
+    return builder;
+  }
+
+  const conversationsBuilder = createBuilder({
+    order: () => Promise.resolve({ data: options.listData ?? [], error: null }),
+    single: () =>
+      Promise.resolve({
+        data: options.findOrCreateData,
+        error: options.findOrCreateData ? null : new Error("not found"),
+      }),
+    maybeSingle: () =>
+      Promise.resolve({
+        data: options.findOrCreateData ?? null,
+        error: options.findOrCreateData ? null : new Error("not found"),
+      }),
+  });
+
+  const messagesBuilder = createBuilder({
+    order: () => Promise.resolve({ data: options.loadMessagesData ?? [], error: null }),
+  });
+
+  const memoriesBuilder = createBuilder({
+    order: () =>
+      Promise.resolve({
+        data: options.loadMemoriesData ?? [],
+        error: null,
+      }),
+  });
+
+  const summariesBuilder = createBuilder({
+    limit: () =>
+      Promise.resolve({
+        data: options.loadSummaryData ? [options.loadSummaryData] : [],
+        error: null,
+      }),
+    single: () =>
+      Promise.resolve({
+        data: options.loadSummaryData,
+        error: options.loadSummaryData ? null : { code: "PGRST116" },
+      }),
+  });
+
+  const usageBuilder = createBuilder({
+    gte: () =>
+      Promise.resolve({
+        data: [{ total_tokens: options.sumDailyUsageValue ?? 0 }],
+        error: null,
+      }),
+  });
+
   return {
     auth: {
       getUser: vi.fn(async () => ({
@@ -75,169 +145,24 @@ function createMockSupabase(
       })),
     },
     from: vi.fn((table: string) => {
-      const base = {
-        select: vi.fn(() => base),
-        eq: vi.fn(() => base),
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-        limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
-        single: vi.fn(() => Promise.resolve({ data: null, error: { code: "PGRST116" } })),
-        insert: vi.fn(() => base),
-        update: vi.fn(() => base),
-        delete: vi.fn(() => base),
-      };
-
-      if (table === "conversations") {
-        return {
-          ...base,
-          select: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() =>
-                Promise.resolve({
-                  data: options.findOrCreateData,
-                  error: options.findOrCreateData ? null : new Error("not found"),
-                }),
-              ),
-            })),
-            order: vi.fn(() => Promise.resolve({ data: options.listData ?? [], error: null })),
-          })),
-          insert: vi.fn(() => ({
-            ...base,
-            select: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() =>
-                Promise.resolve({
-                  data: options.findOrCreateData,
-                  error: options.findOrCreateData ? null : new Error("insert failed"),
-                }),
-              ),
-            })),
-          })),
-          update: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => Promise.resolve({ error: options.insertError ?? null })),
-          })),
-          delete: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              eq: vi.fn(() => Promise.resolve({ error: null })),
-            })),
-          })),
-        };
-      }
-
-      if (table === "messages") {
-        return {
-          ...base,
-          select: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              order: vi.fn(() =>
-                Promise.resolve({ data: options.loadMessagesData ?? [], error: null }),
-              ),
-            })),
-          })),
-          insert: vi.fn(() => ({
-            ...base,
-            select: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-            })),
-          })),
-        };
-      }
-
-      if (table === "memories") {
-        return {
-          ...base,
-          select: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              order: vi.fn(() => ({
-                ...base,
-                limit: vi.fn(() =>
-                  Promise.resolve({ data: options.loadMemoriesData ?? [], error: null }),
-                ),
-              })),
-            })),
-          })),
-          insert: vi.fn(() => ({
-            ...base,
-            select: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-            })),
-          })),
-        };
-      }
-
-      if (table === "summaries") {
-        return {
-          ...base,
-          select: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              order: vi.fn(() => ({
-                ...base,
-                limit: vi.fn(() => ({
-                  ...base,
-                  single: vi.fn(() =>
-                    Promise.resolve({
-                      data: options.loadSummaryData,
-                      error: options.loadSummaryData ? null : { code: "PGRST116" },
-                    }),
-                  ),
-                })),
-              })),
-            })),
-          })),
-          insert: vi.fn(() => ({
-            ...base,
-            select: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() => Promise.resolve({ data: options.loadSummaryData, error: null })),
-            })),
-          })),
-        };
-      }
-
-      if (table === "usage") {
-        return {
-          ...base,
-          select: vi.fn(() => ({
-            ...base,
-            eq: vi.fn(() => ({
-              ...base,
-              gte: vi.fn(() =>
-                Promise.resolve({
-                  data: [{ total_tokens: options.sumDailyUsageValue ?? 0 }],
-                  error: null,
-                }),
-              ),
-            })),
-          })),
-          insert: vi.fn(() => ({
-            ...base,
-            select: vi.fn(() => ({
-              ...base,
-              single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-            })),
-          })),
-        };
-      }
-
-      return base;
+      if (table === "conversations") return conversationsBuilder;
+      if (table === "messages") return messagesBuilder;
+      if (table === "memories") return memoriesBuilder;
+      if (table === "summaries") return summariesBuilder;
+      if (table === "usage") return usageBuilder;
+      return createBuilder();
     }),
   } as unknown as ReturnType<typeof createUserClient>;
 }
 
 function setupMocks(options: Parameters<typeof createMockSupabase>[0] = {}) {
-  const mockSupabase = createMockSupabase(options);
+  const mockSupabase = createMockSupabase({
+    findOrCreateData: {
+      id: "conv-1",
+      title: "Existing chat",
+    },
+    ...options,
+  });
   vi.mocked(createUserClient).mockReturnValue(mockSupabase);
   vi.mocked(createAdminClient).mockReturnValue(mockSupabase);
   vi.mocked(findOrCreateConversation).mockImplementation(

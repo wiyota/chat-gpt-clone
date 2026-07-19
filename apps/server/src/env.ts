@@ -20,7 +20,7 @@ const envSchema = Type.Object({
   OPENAI_API_KEY: Type.String({ minLength: 1 }),
   OPENAI_MODEL: Type.Optional(Type.String()),
   LLM_PROVIDER: Type.Optional(Type.Union([Type.Literal("openai"), Type.Literal("anthropic")])),
-  CORS_ORIGIN: Type.Optional(Type.String()),
+  CORS_ORIGIN: Type.Optional(Type.String({ format: "uri" })),
   CONTEXT_WINDOW_TOKENS: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => Number(value ?? "4000"))
     .Encode((value) => String(value)),
@@ -45,7 +45,7 @@ export const env = Value.Decode(envSchema, {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
   LLM_PROVIDER: process.env.LLM_PROVIDER ?? "openai",
-  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "*",
+  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   CONTEXT_WINDOW_TOKENS: process.env.CONTEXT_WINDOW_TOKENS ?? "4000",
   RECENT_MESSAGES_TO_KEEP: process.env.RECENT_MESSAGES_TO_KEEP ?? "6",
   DAILY_TOKEN_BUDGET: process.env.DAILY_TOKEN_BUDGET ?? "10000",

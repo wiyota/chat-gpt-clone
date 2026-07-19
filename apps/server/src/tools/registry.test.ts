@@ -92,7 +92,7 @@ describe("executeToolCall", () => {
       id: "call_unbalanced",
       function: { name: "calculator", arguments: JSON.stringify({ expression: "(1 + 2" }) },
     });
-    expect(result.content).toContain("Invalid calculator expression");
+    expect(result.content).toContain("Unbalanced parentheses");
   });
 
   it("returns an error for operator-only input", async () => {

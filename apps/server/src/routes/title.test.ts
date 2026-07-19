@@ -19,27 +19,42 @@ import { createUserClient } from "../supabase/client.js";
 import { generateTitle, updateConversationTitle } from "../db/title.js";
 import type { User } from "@supabase/supabase-js";
 
+function createMockClient(ownedConversationId: string | null = "conv-1") {
+  const conversationsBuilder = {
+    select: vi.fn(() => conversationsBuilder),
+    eq: vi.fn(() => conversationsBuilder),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve({
+        data: ownedConversationId ? { id: ownedConversationId } : null,
+        error: null,
+      }),
+    ),
+  };
+
+  return {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: {
+          user: {
+            id: "user-1",
+            email: "test@example.com",
+            app_metadata: {},
+            user_metadata: {},
+            aud: "authenticated",
+            created_at: new Date().toISOString(),
+          } as User,
+        },
+        error: null,
+      })),
+    },
+    from: vi.fn(() => conversationsBuilder),
+  } as unknown as ReturnType<typeof createUserClient>;
+}
+
 describe("titleRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockedCreateUserClient = vi.mocked(createUserClient);
-    mockedCreateUserClient.mockReturnValue({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: {
-            user: {
-              id: "user-1",
-              email: "test@example.com",
-              app_metadata: {},
-              user_metadata: {},
-              aud: "authenticated",
-              created_at: new Date().toISOString(),
-            } as User,
-          },
-          error: null,
-        })),
-      },
-    } as unknown as ReturnType<typeof createUserClient>);
+    vi.mocked(createUserClient).mockReturnValue(createMockClient());
   });
 
   function buildApp() {
@@ -91,6 +106,14 @@ describe("titleRoute", () => {
     const res = await request("conv-1", {});
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ title: "New conversation" });
+  });
+
+  it("returns 404 when the conversation does not belong to the user", async () => {
+    vi.mocked(createUserClient).mockReturnValue(createMockClient(null));
+    vi.mocked(updateConversationTitle).mockResolvedValue(true);
+    const res = await request("conv-1", { title: "Custom title" });
+    expect(res.status).toBe(404);
+    expect(updateConversationTitle).not.toHaveBeenCalled();
   });
 
   it("returns 500 when the title update fails", async () => {

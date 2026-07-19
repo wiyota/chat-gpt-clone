@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Hono } from "hono";
 import { authMiddleware } from "./middleware.js";
 
+vi.mock("../env.js", () => ({
+  env: { E2E: true },
+}));
+
 vi.mock("../supabase/client.js", () => ({
   createUserClient: vi.fn(),
 }));
@@ -73,5 +77,17 @@ describe("authMiddleware", () => {
     expect(vi.mocked(createUserClient)).not.toHaveBeenCalled();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ userId: "e2e-user", userEmail: "e2e@example.com" });
+  });
+
+  it("rejects the e2e-token when E2E mode is disabled", async () => {
+    const { env } = await import("../env.js");
+    env.E2E = false;
+    mockUser(null, new Error("invalid token"));
+    const res = await buildApp().request("/", {
+      headers: { Authorization: "Bearer e2e-token" },
+    });
+    expect(res.status).toBe(401);
+    // Restore E2E for subsequent tests.
+    env.E2E = true;
   });
 });

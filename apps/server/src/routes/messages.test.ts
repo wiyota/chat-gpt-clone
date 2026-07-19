@@ -8,37 +8,56 @@ vi.mock("../supabase/client.js", () => ({
 
 import { createUserClient } from "../supabase/client.js";
 
+function createMockClient(
+  options: { data?: unknown[]; error?: Error | null; owned?: boolean } = {},
+) {
+  const conversationsBuilder = {
+    select: vi.fn(() => conversationsBuilder),
+    eq: vi.fn(() => conversationsBuilder),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve({
+        data: options.owned !== false ? { id: "conv-1" } : null,
+        error: null,
+      }),
+    ),
+  };
+
+  const messagesBuilder = {
+    select: vi.fn(() => messagesBuilder),
+    eq: vi.fn(() => messagesBuilder),
+    order: vi.fn(() => Promise.resolve({ data: options.data ?? [], error: options.error ?? null })),
+  };
+
+  return {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: {
+          user: {
+            id: "user-1",
+            email: "test@example.com",
+            app_metadata: {},
+            user_metadata: {},
+            aud: "authenticated",
+            created_at: new Date().toISOString(),
+          } as User,
+        },
+        error: null,
+      })),
+    },
+    from: vi.fn((table: string) => {
+      if (table === "conversations") return conversationsBuilder;
+      return messagesBuilder;
+    }),
+  } as unknown as ReturnType<typeof createUserClient>;
+}
+
 describe("messagesRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  function mockClient({ data, error }: { data?: unknown[]; error?: Error | null }) {
-    const mockedCreateUserClient = vi.mocked(createUserClient);
-    mockedCreateUserClient.mockReturnValue({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: {
-            user: {
-              id: "user-1",
-              email: "test@example.com",
-              app_metadata: {},
-              user_metadata: {},
-              aud: "authenticated",
-              created_at: new Date().toISOString(),
-            } as User,
-          },
-          error: null,
-        })),
-      },
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data, error })),
-          })),
-        })),
-      })) as unknown as ReturnType<typeof createUserClient>["from"],
-    } as unknown as ReturnType<typeof createUserClient>);
+  function mockClient(options: { data?: unknown[]; error?: Error | null; owned?: boolean } = {}) {
+    vi.mocked(createUserClient).mockReturnValue(createMockClient(options));
   }
 
   it("returns messages for a conversation", async () => {
@@ -67,6 +86,14 @@ describe("messagesRoute", () => {
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ messages: [] });
+  });
+
+  it("returns 404 when the conversation does not belong to the user", async () => {
+    mockClient({ owned: false });
+    const res = await messagesRoute.request("/", {
+      headers: { Authorization: "Bearer token" },
+    });
+    expect(res.status).toBe(404);
   });
 
   it("returns 500 when loading messages fails", async () => {

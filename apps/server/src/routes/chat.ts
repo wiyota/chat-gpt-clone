@@ -18,22 +18,51 @@ import { checkDailyBudget } from "../usage/limit.js";
 import { getToolDefinitions, executeToolCall } from "../tools/registry.js";
 import { env } from "../env.js";
 
+const MAX_CHAT_MESSAGES = 50;
+const MAX_MESSAGE_LENGTH = 10_000;
+
 const chatSchema = Type.Object({
   messages: Type.Array(
     Type.Object({
-      role: Type.Union([
-        Type.Literal("system"),
-        Type.Literal("user"),
-        Type.Literal("assistant"),
-        Type.Literal("tool"),
-      ]),
-      content: Type.String(),
+      // Only user and assistant roles may be supplied by the client. System and
+      // tool messages are generated server-side to prevent prompt injection or
+      // forged tool results.
+      role: Type.Union([Type.Literal("user"), Type.Literal("assistant")]),
+      content: Type.String({ minLength: 1, maxLength: MAX_MESSAGE_LENGTH }),
       tool_calls: Type.Optional(Type.Array(Type.Unknown())),
       tool_call_id: Type.Optional(Type.String()),
     }),
+    { maxItems: MAX_CHAT_MESSAGES },
   ),
   conversationId: Type.Optional(Type.String()),
 });
+
+function getBearerToken(header: string | undefined): string | null {
+  if (!header) return null;
+  const [scheme, token, ...rest] = header.split(" ");
+  if (scheme !== "Bearer" || !token || rest.length > 0) return null;
+  return token;
+}
+
+async function verifyConversationOwner(
+  supabase: ReturnType<typeof createUserClient>,
+  conversationId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("verifyConversationOwner error:", error);
+    return false;
+  }
+
+  return !!data;
+}
 
 async function persistFacts(
   provider: LLMAdapter,
@@ -64,9 +93,22 @@ export const chatRoute = new Hono()
       conversationId?: string;
     };
 
-    const token = c.req.header("Authorization")!.replace("Bearer ", "");
+    const token = getBearerToken(c.req.header("Authorization"));
+    if (!token) {
+      return c.json({ error: "Invalid Authorization header" }, 401);
+    }
+
     const supabase = createUserClient(token);
     const adminSupabase = createAdminClient();
+
+    // When reusing an existing conversation, verify the current user owns it
+    // before reading or appending any messages.
+    if (conversationId) {
+      const isOwner = await verifyConversationOwner(supabase, conversationId, auth.userId);
+      if (!isOwner) {
+        return c.json({ error: "Conversation not found or access denied" }, 404);
+      }
+    }
 
     const userMessage = messages[messages.length - 1];
     const initialTitle = userMessage?.content.slice(0, 50);
@@ -79,6 +121,11 @@ export const chatRoute = new Hono()
     );
     if (!conversation) {
       return c.json({ error: "Failed to create or access conversation" }, 500);
+    }
+
+    // Defense in depth: ensure the returned conversation belongs to this user.
+    if (conversation.user_id !== auth.userId) {
+      return c.json({ error: "Conversation not found or access denied" }, 404);
     }
 
     if (userMessage) {

@@ -19,6 +19,7 @@ export async function findOrCreateConversation(
       .from("conversations")
       .select("*")
       .eq("id", conversationId)
+      .eq("user_id", userId)
       .single();
 
     if (error) {
