@@ -110,7 +110,9 @@ export class OpenAIAdapter implements LLMAdapter {
       const content = delta?.content ?? "";
 
       if (content) {
-        console.log("[OpenAI chunk]", JSON.stringify(content));
+        if (isLoggingEnabled()) {
+          console.log("[OpenAI chunk]", JSON.stringify(content));
+        }
         yield { content };
       }
 
@@ -155,6 +157,12 @@ export class OpenAIAdapter implements LLMAdapter {
   countTokens(messages: Message[]): number {
     return countMessagesTokens(messages, this.model);
   }
+}
+
+function isLoggingEnabled(): boolean {
+  // Only log streaming chunks in development/E2E to avoid leaking
+  // user content into production logs.
+  return env.E2E || process.env.NODE_ENV === "development" || process.env.LOG_LLM_STREAM === "true";
 }
 
 function toOpenAIMessage(message: Message): OpenAI.Chat.ChatCompletionMessageParam {

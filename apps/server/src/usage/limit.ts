@@ -15,12 +15,13 @@ export async function checkDailyBudget(
 ): Promise<BudgetCheck> {
   const todayUsage = await sumDailyUsage(supabase, userId);
   const budget = env.DAILY_TOKEN_BUDGET;
-  // In development, disable the daily budget guard so engineers can iterate
-  // without worrying about usage limits. `tsx watch` does not always set
-  // NODE_ENV, so also check the absence of typical production signals.
-  const isDevelopment =
+  // In development/E2E, disable the daily budget guard so engineers can iterate
+  // without worrying about usage limits. Requires explicit NODE_ENV=development
+  // or E2E/SKIP_BUDGET flags; default behavior (no NODE_ENV set) treats the
+  // environment as production and enforces the budget.
+  const bypassBudget =
     process.env.NODE_ENV === "development" || env.E2E || process.env.SKIP_BUDGET === "true";
-  if (isDevelopment) {
+  if (bypassBudget) {
     return { allowed: true, todayUsage, budget };
   }
   return {

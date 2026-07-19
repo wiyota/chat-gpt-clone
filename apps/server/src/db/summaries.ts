@@ -20,7 +20,14 @@ export async function loadSummary(
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") return null; // no rows
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "PGRST116"
+    ) {
+      return null; // no rows
+    }
     console.error("loadSummary error:", error);
     return null;
   }

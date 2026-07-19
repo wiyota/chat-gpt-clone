@@ -11,6 +11,16 @@ import type { LLMAdapter } from "./llm/provider.js";
 export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
   const app = new Hono();
 
+  app.use("*", async (c, next) => {
+    // Basic security headers. In production, use a CDN or reverse proxy to add
+    // stricter policies (e.g. CSP nonces, HSTS preload).
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("X-Frame-Options", "DENY");
+    c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    c.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    await next();
+  });
+
   app.use(
     "*",
     cors({
@@ -41,8 +51,7 @@ export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
     // Only expose internal error details in development/test environments.
     // In production, return a generic message to avoid leaking implementation
     // details, stack traces, or potentially sensitive configuration values.
-    const isDevelopment =
-      env.E2E || !process.env.NODE_ENV || process.env.NODE_ENV === "development";
+    const isDevelopment = env.E2E || process.env.NODE_ENV === "development";
     const message = isDevelopment && err instanceof Error ? err.message : "Internal server error";
 
     console.error(err);
