@@ -207,14 +207,15 @@ export const chatRoute = new Hono()
               break;
             }
             if (chunk.content) {
-              const lines = chunk.content.split(/\r?\n/).filter((line) => line.length > 0);
+              // Empty data lines are significant: the client joins SSE data
+              // lines with newlines, so dropping them changes Markdown
+              // paragraphs and fenced code blocks.
+              const lines = chunk.content.split(/\r?\n/);
               for (const line of lines) {
                 await stream.write(`data: ${line}\n`);
               }
-              if (lines.length > 0) {
-                await stream.write("\n");
-              }
-              roundContent += lines.join("\n");
+              await stream.write("\n");
+              roundContent += chunk.content;
             }
             if (chunk.tool_calls && chunk.tool_calls.length > 0) {
               roundToolCalls = chunk.tool_calls;

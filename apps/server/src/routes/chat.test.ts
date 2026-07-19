@@ -338,4 +338,17 @@ describe("chatRoute", () => {
     expect(body).toContain("data: Line two");
     expect(body).toContain("data: Line three");
   });
+
+  it("preserves empty lines in streamed Markdown", async () => {
+    setupMocks();
+    const app = buildApp(
+      createMockLLMProvider({
+        response: "",
+        streamChunks: ["first paragraph\n\nsecond paragraph"],
+      }),
+    );
+    const res = await request(app, { messages: [{ role: "user", content: "Hi" }] });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("data: first paragraph\ndata: \ndata: second paragraph");
+  });
 });
