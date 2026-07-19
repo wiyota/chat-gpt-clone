@@ -3,8 +3,13 @@ import { tbValidator } from "@hono/typebox-validator";
 import { Type } from "@sinclair/typebox";
 import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient } from "../supabase/client.js";
+import { createAdminClient } from "../supabase/client.js";
 import { generateTitle, updateConversationTitle } from "../db/title.js";
 import { createLLMProvider } from "../llm/index.js";
+import { loadMessages } from "../db/messages.js";
+import { checkDailyBudget } from "../usage/limit.js";
+import { consumeChatRequest } from "../usage/rateLimit.js";
+import { finalizeUsage } from "../db/usage.js";
 
 const titleBodySchema = Type.Object({
   title: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
@@ -36,7 +41,7 @@ export const titleRoute = new Hono()
     // updating its title.
     const { data: conversation, error: conversationError } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id, title")
       .eq("id", id)
       .eq("user_id", auth.userId)
       .maybeSingle();
@@ -59,8 +64,52 @@ export const titleRoute = new Hono()
         return c.json({ title: "New conversation" });
       }
     } else {
+      // Avoid allowing repeated title-generation requests for an already
+      // titled conversation to consume provider credits.
+      if (typeof conversation.title === "string" && conversation.title !== "New conversation") {
+        return c.json({ title: conversation.title });
+      }
+
+      if (!consumeChatRequest(auth.userId)) {
+        return c.json({ error: "Too many requests" }, 429);
+      }
+
       const provider = createLLMProvider();
+      const messages = await loadMessages(supabase, id);
+      const firstUserMessage = messages.find((message) => message.role === "user");
+      if (!firstUserMessage?.content) {
+        return c.json({ title: "New conversation" });
+      }
+
+      const titlePromptTokens = provider.countTokens([
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant generating conversation titles. Generate a short title based only on the user's first message.",
+        },
+        { role: "user", content: firstUserMessage.content },
+      ]);
+      const budgetCheck = await checkDailyBudget(supabase, auth.userId, titlePromptTokens + 64);
+      if (!budgetCheck.allowed) {
+        return c.json(
+          {
+            error: "Daily token budget exceeded",
+            code: "quota_exceeded",
+            todayUsage: budgetCheck.todayUsage,
+            budget: budgetCheck.budget,
+          },
+          429,
+        );
+      }
+
       title = await generateTitle(provider, supabase, id);
+      if (budgetCheck.reservationId) {
+        await finalizeUsage(createAdminClient(), budgetCheck.reservationId, {
+          model: "title-generation",
+          promptTokens: titlePromptTokens,
+          completionTokens: provider.countTokens([{ role: "assistant", content: title ?? "" }]),
+        });
+      }
     }
 
     if (!title) {

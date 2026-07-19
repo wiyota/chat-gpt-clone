@@ -4,6 +4,24 @@ import { titleRoute } from "./title.js";
 
 vi.mock("../supabase/client.js", () => ({
   createUserClient: vi.fn(),
+  createAdminClient: vi.fn(),
+}));
+
+vi.mock("../db/messages.js", () => ({
+  loadMessages: vi.fn(async () => [{ role: "user", content: "Hello" }]),
+}));
+
+vi.mock("../usage/limit.js", () => ({
+  checkDailyBudget: vi.fn(async () => ({
+    allowed: true,
+    todayUsage: 0,
+    budget: 10_000,
+    reservationId: "reservation-1",
+  })),
+}));
+
+vi.mock("../db/usage.js", () => ({
+  finalizeUsage: vi.fn(async () => true),
 }));
 
 vi.mock("../db/title.js", () => ({
@@ -15,7 +33,8 @@ vi.mock("../llm/index.js", () => ({
   createLLMProvider: vi.fn(),
 }));
 
-import { createUserClient } from "../supabase/client.js";
+import { createUserClient, createAdminClient } from "../supabase/client.js";
+import { createLLMProvider } from "../llm/index.js";
 import { generateTitle, updateConversationTitle } from "../db/title.js";
 import type { User } from "@supabase/supabase-js";
 
@@ -55,6 +74,15 @@ describe("titleRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(createUserClient).mockReturnValue(createMockClient());
+    vi.mocked(createAdminClient).mockReturnValue({} as ReturnType<typeof createUserClient>);
+    vi.mocked(createLLMProvider).mockReturnValue({
+      countTokens: vi.fn((messages: { content: string }[]) =>
+        messages.reduce((sum, message) => sum + message.content.length, 0),
+      ),
+      chat: vi.fn(),
+      chatStream: async function* () {},
+      chatWithTools: vi.fn(),
+    });
   });
 
   function buildApp() {

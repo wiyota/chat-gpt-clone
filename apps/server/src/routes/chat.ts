@@ -68,10 +68,23 @@ async function verifyConversationOwner(
 async function persistFacts(
   provider: LLMAdapter,
   supabase: ReturnType<typeof createUserClient>,
+  adminSupabase: ReturnType<typeof createAdminClient>,
   userId: string,
   userText: string,
 ): Promise<void> {
   try {
+    const extractionMessages: Message[] = [
+      {
+        role: "system",
+        content:
+          "Extract any durable facts about the user from the following message. Return one fact per line. If there is nothing worth remembering, return an empty response. Keep each fact short.",
+      },
+      { role: "user", content: userText },
+    ];
+    const estimatedTokens = provider.countTokens(extractionMessages) + 64;
+    const extractionBudget = await checkDailyBudget(supabase, userId, estimatedTokens);
+    if (!extractionBudget.allowed) return;
+
     const existingMemories = await loadMemories(supabase, userId, env.MEMORY_MAX_FACTS);
     const existingFacts = new Set(existingMemories.map((m) => m.fact));
     const facts = await extractFacts(provider, userText);
@@ -85,6 +98,16 @@ async function persistFacts(
         await insertMemory(supabase, userId, normalizedFact);
         existingFacts.add(normalizedFact);
       }
+    }
+
+    if (extractionBudget.reservationId) {
+      await finalizeUsage(adminSupabase, extractionBudget.reservationId, {
+        model: env.OPENAI_MODEL as string,
+        promptTokens: provider.countTokens(extractionMessages),
+        completionTokens: provider.countTokens(
+          facts.map((fact) => ({ role: "assistant", content: fact })),
+        ),
+      });
     }
   } catch (err) {
     console.error("persistFacts error:", err);
@@ -174,7 +197,13 @@ export const chatRoute = new Hono()
     }
 
     // Extract facts only after the request has passed the budget gate.
-    const factTask = persistFacts(provider, supabase, auth.userId, userMessage.content);
+    const factTask = persistFacts(
+      provider,
+      supabase,
+      adminSupabase,
+      auth.userId,
+      userMessage.content,
+    );
 
     return stream(c, async (stream: StreamingApi) => {
       c.header("Content-Type", "text/event-stream");

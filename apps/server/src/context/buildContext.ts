@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@chat/shared";
 import { loadMessages } from "../db/messages.js";
-import { insertSummary, loadSummary } from "../db/summaries.js";
+import { loadSummary } from "../db/summaries.js";
 import { loadMemories } from "../db/memories.js";
 import type { LLMAdapter } from "../llm/provider.js";
 import { env } from "../env.js";
@@ -43,18 +43,10 @@ export async function buildContext(
   }
 
   let summary = await loadSummary(supabase, conversationId);
-  if (!summary) {
-    const response = await provider.chat([
-      {
-        role: "system",
-        content:
-          "Summarize the following conversation concisely. Preserve key facts, decisions, and user intent. Do not add greetings or commentary.",
-      },
-      ...olderMessages,
-    ]);
-
-    summary = await insertSummary(supabase, conversationId, response.content);
-  }
+  // Do not make an unmetered LLM call while constructing context. Summary
+  // generation must be scheduled through a budgeted background/job path; a
+  // request that is later rejected by the quota gate must not still incur LLM
+  // cost. If no summary exists yet, the recent messages remain usable.
 
   if (summary?.content) {
     context.push({

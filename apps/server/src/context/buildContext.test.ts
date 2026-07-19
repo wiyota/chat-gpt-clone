@@ -83,7 +83,7 @@ describe("buildContext", () => {
     });
   });
 
-  it("summarizes older messages when the token budget is exceeded", async () => {
+  it("keeps recent messages without making an unmetered summary call", async () => {
     const messages: Message[] = Array.from({ length: 20 }, (_, i) => ({
       role: i % 2 === 0 ? "user" : "assistant",
       content: "message ".repeat(50),
@@ -91,21 +91,13 @@ describe("buildContext", () => {
     vi.mocked(loadMessages).mockResolvedValue(messages);
     vi.mocked(loadMemories).mockResolvedValue([]);
     vi.mocked(loadSummary).mockResolvedValue(null);
-    vi.mocked(insertSummary).mockResolvedValue({
-      id: "sum-1",
-      conversation_id: "conv-1",
-      content: "Summary of older discussion",
-      created_at: "",
-    });
-
     const provider = createMockProvider();
     const context = await buildContext(createMockSupabase(), "conv-1", "user-1", provider);
 
-    expect(provider.chat).toHaveBeenCalled();
-    expect(context).toContainEqual({
-      role: "system",
-      content: "Summary of earlier conversation:\nSummary of older discussion",
-    });
+    expect(provider.chat).not.toHaveBeenCalled();
+    expect(context).not.toContainEqual(
+      expect.objectContaining({ content: expect.stringContaining("Summary of earlier") }),
+    );
 
     const recentMessages = context.filter((m) => m.role === "user" || m.role === "assistant");
     expect(recentMessages.length).toBe(6);
