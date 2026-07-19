@@ -8,6 +8,8 @@ export async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) {
+    // Test override is only available in development builds.
+    if (import.meta.env.PROD) throw new Error("Not authenticated");
     const override = window.localStorage.getItem("__test_auth_token");
     if (!override) throw new Error("Not authenticated");
     return {

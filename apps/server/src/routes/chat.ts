@@ -196,12 +196,14 @@ export const chatRoute = new Hono()
               break;
             }
             if (chunk.content) {
-              roundContent += chunk.content;
-              const lines = chunk.content.split("\n");
+              const lines = chunk.content.split(/\r?\n/).filter((line) => line.length > 0);
               for (const line of lines) {
                 await stream.write(`data: ${line}\n`);
               }
-              await stream.write("\n");
+              if (lines.length > 0) {
+                await stream.write("\n");
+              }
+              roundContent += lines.join("\n");
             }
             if (chunk.tool_calls && chunk.tool_calls.length > 0) {
               roundToolCalls = chunk.tool_calls;

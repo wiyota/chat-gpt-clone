@@ -9,4 +9,6 @@ serve({
   port: env.PORT as number,
 });
 
-console.log(`Server is running on http://localhost:${env.PORT}`);
+if (env.E2E || process.env.NODE_ENV === "development") {
+  console.log(`Server is running on http://localhost:${env.PORT}`);
+}
