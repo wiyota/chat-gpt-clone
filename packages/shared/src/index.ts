@@ -16,6 +16,11 @@ export interface ChatResponse {
 }
 
 export interface StreamChunk {
-  content: string;
+  content?: string;
   done?: boolean;
+  tool_calls?: {
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }[];
 }

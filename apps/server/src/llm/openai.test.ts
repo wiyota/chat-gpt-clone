@@ -149,7 +149,7 @@ describe("OpenAIAdapter", () => {
 
       const chunks: string[] = [];
       for await (const chunk of adapter.chatStream([{ role: "user", content: "hi" }])) {
-        if (!chunk.done) {
+        if (chunk.content) {
           chunks.push(chunk.content);
         }
       }
@@ -177,7 +177,7 @@ describe("OpenAIAdapter", () => {
           [{ role: "user", content: "hi" }],
           controller.signal,
         )) {
-          if (!chunk.done) {
+          if (chunk.content) {
             chunks.push(chunk.content);
           }
         }
@@ -187,6 +187,56 @@ describe("OpenAIAdapter", () => {
       await streamPromise;
 
       expect(chunks.length).toBeLessThanOrEqual(1);
+    });
+
+    it("yields tool_calls when the model requests tools in stream mode", async () => {
+      async function* mockStream() {
+        yield {
+          choices: [
+            {
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: "call_1",
+                    type: "function",
+                    function: { name: "getCurrentTime", arguments: "{}" },
+                  },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+        };
+      }
+
+      const mockClient = createMockOpenAI();
+      mockClient.chat.completions.create.mockResolvedValue(mockStream());
+
+      const adapter = new OpenAIAdapter("test-key");
+      (adapter as unknown as { client: typeof mockClient }).client = mockClient;
+
+      const chunks: import("@chat/shared").StreamChunk[] = [];
+      for await (const chunk of adapter.chatStream(
+        [{ role: "user", content: "time?" }],
+        undefined,
+        [
+          {
+            type: "function",
+            function: {
+              name: "getCurrentTime",
+              description: "Return current time",
+              parameters: Type.Object({}),
+            },
+          },
+        ],
+      )) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0].tool_calls).toHaveLength(1);
+      expect(chunks[0].tool_calls?.[0].function.name).toBe("getCurrentTime");
     });
   });
 

@@ -105,7 +105,10 @@ describe("createApp", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ content: "Injected response", conversationId: "conv-1" });
+    expect(res.headers.get("Content-Type")).toContain("text/event-stream");
+    const body = await res.text();
+    expect(body).toContain("data: Injected response");
+    expect(body).toContain("data: [DONE]");
   });
 
   it("rejects requests without an Authorization header", async () => {

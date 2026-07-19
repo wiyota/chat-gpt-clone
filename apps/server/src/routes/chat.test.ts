@@ -288,12 +288,16 @@ describe("chatRoute", () => {
     });
   }
 
-  it("returns a direct JSON response when the model answers without streaming", async () => {
+  it("streams the response when the model answers directly", async () => {
     setupMocks();
     const app = buildApp(createMockLLMProvider({ response: "Direct answer" }));
     const res = await request(app, { messages: [{ role: "user", content: "Hi" }] });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ content: "Direct answer", conversationId: "new-conv" });
+    expect(res.headers.get("Content-Type")).toContain("text/event-stream");
+    const body = await res.text();
+    expect(body).toContain("data: conversationId:new-conv");
+    expect(body).toContain("data: Direct answer");
+    expect(body).toContain("data: [DONE]");
   });
 
   it("streams the response when no prebuilt answer is returned", async () => {
@@ -336,7 +340,7 @@ describe("chatRoute", () => {
     expect(await res.json()).toMatchObject({ code: "quota_exceeded" });
   });
 
-  it("handles tool calls and returns the final answer", async () => {
+  it("handles tool calls and streams the final answer", async () => {
     setupMocks();
     const provider = createMockLLMProvider({
       response: "The time is now.",
@@ -360,7 +364,10 @@ describe("chatRoute", () => {
     const app = buildApp(provider);
     const res = await request(app, { messages: [{ role: "user", content: "What time is it?" }] });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ content: "The time is now.", conversationId: "new-conv" });
+    expect(res.headers.get("Content-Type")).toContain("text/event-stream");
+    const body = await res.text();
+    expect(body).toContain("data: The time is now.");
+    expect(body).toContain("data: [DONE]");
   });
 
   it("persists the conversation id from the request body", async () => {
@@ -371,6 +378,10 @@ describe("chatRoute", () => {
       conversationId: "existing-1",
     });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ content: "OK", conversationId: "existing-1" });
+    expect(res.headers.get("Content-Type")).toContain("text/event-stream");
+    const body = await res.text();
+    expect(body).toContain("data: conversationId:existing-1");
+    expect(body).toContain("data: OK");
+    expect(body).toContain("data: [DONE]");
   });
 });

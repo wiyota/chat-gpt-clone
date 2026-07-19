@@ -20,10 +20,22 @@ export function createMockLLMProvider(options: MockLLMProviderOptions = {}): LLM
       };
     },
 
-    async *chatStream(_messages: Message[]): AsyncIterable<StreamChunk> {
-      const chunks = options.streamChunks ?? [options.response ?? "Mock response"];
+    async *chatStream(
+      _messages: Message[],
+      _signal?: AbortSignal,
+      tools?: ToolDefinition[],
+    ): AsyncIterable<StreamChunk> {
+      const turn = options.toolTurns?.shift();
+      if (turn && turn.kind === "tool_calls" && tools) {
+        yield { tool_calls: turn.message.tool_calls };
+        return;
+      }
+
+      const response =
+        turn?.kind === "message" ? turn.content : (options.response ?? "Mock response");
+      const chunks = options.streamChunks ?? [response];
       for (const chunk of chunks) {
-        yield { content: chunk, done: false };
+        yield { content: chunk };
       }
       yield { content: "", done: true };
     },

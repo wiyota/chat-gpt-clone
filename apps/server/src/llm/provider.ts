@@ -28,7 +28,11 @@ export type ToolTurnResponse =
 
 export interface LLMAdapter {
   chat(messages: Message[]): Promise<ChatResponse>;
-  chatStream(messages: Message[], signal?: AbortSignal): AsyncIterable<StreamChunk>;
+  chatStream(
+    messages: Message[],
+    signal?: AbortSignal,
+    tools?: ToolDefinition[],
+  ): AsyncIterable<StreamChunk>;
   chatWithTools(messages: Message[], tools: ToolDefinition[]): Promise<ToolTurnResponse>;
   countTokens(messages: Message[]): number;
 }

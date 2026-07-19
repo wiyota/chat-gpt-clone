@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createMockLLMProvider } from "./mock.js";
-import type { Message } from "@chat/shared";
+import type { Message, StreamChunk } from "@chat/shared";
 
 describe("createMockLLMProvider", () => {
   describe("chat", () => {
@@ -168,8 +168,8 @@ describe("createMockLLMProvider", () => {
   });
 });
 
-async function collectStream(stream: AsyncIterable<{ content: string; done?: boolean }>) {
-  const chunks: { content: string; done?: boolean }[] = [];
+async function collectStream(stream: AsyncIterable<StreamChunk>) {
+  const chunks: StreamChunk[] = [];
   for await (const chunk of stream) {
     chunks.push(chunk);
   }

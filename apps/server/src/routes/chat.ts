@@ -99,75 +99,9 @@ export const chatRoute = new Hono()
     const messagesForModel: Message[] = [...contextMessages];
     let toolRounds = 0;
     const maxToolRounds = 3;
-    let prebuiltAnswer: string | null = null;
-
-    while (toolRounds < maxToolRounds) {
-      const turn = await provider.chatWithTools(messagesForModel, toolDefinitions);
-      if (turn.kind === "message") {
-        prebuiltAnswer = turn.content;
-        messagesForModel.push({
-          role: "assistant",
-          content: turn.content,
-        });
-        break;
-      }
-
-      messagesForModel.push({
-        role: "assistant",
-        content: "",
-        tool_calls: turn.message.tool_calls,
-      });
-
-      for (const call of turn.message.tool_calls) {
-        const result = await executeToolCall({
-          id: call.id,
-          function: {
-            name: call.function.name,
-            arguments: call.function.arguments,
-          },
-        });
-        messagesForModel.push({
-          role: "tool",
-          content: result.content,
-          tool_call_id: result.tool_call_id,
-        });
-      }
-
-      toolRounds++;
-    }
-
-    // Persist the non-streaming assistant/tool exchange before the final stream.
-    for (const message of messagesForModel.slice(contextMessages.length)) {
-      if (message.role === "assistant" || message.role === "tool") {
-        await insertMessage(supabase, conversation.id, message);
-      }
-    }
-
-    // If the model already answered without needing further streaming, return it directly.
-    if (prebuiltAnswer) {
-      await factTask;
-      const promptTokens = provider.countTokens(messagesForModel);
-      const completionTokens = provider.countTokens([
-        { role: "assistant", content: prebuiltAnswer },
-      ]);
-      await insertUsage(adminSupabase, {
-        userId: auth.userId,
-        conversationId: conversation.id,
-        model: env.OPENAI_MODEL as string,
-        promptTokens,
-        completionTokens,
-      });
-
-      return c.json({
-        content: prebuiltAnswer,
-        conversationId: conversation.id,
-      });
-    }
-
-    const finalMessages: Message[] = [...messagesForModel];
 
     const estimatedTokens = provider.countTokens([
-      ...finalMessages,
+      ...messagesForModel,
       userMessage ?? { role: "user", content: "" },
     ]);
 
@@ -191,9 +125,7 @@ export const chatRoute = new Hono()
       c.header("Content-Encoding", "identity");
 
       const signal = c.req.raw.signal;
-      const streamChunks = provider.chatStream(finalMessages, signal);
-
-      let fullContent = "";
+      let finalAssistantContent = "";
       let aborted = false;
 
       try {
@@ -204,16 +136,67 @@ export const chatRoute = new Hono()
       }
 
       try {
-        for await (const chunk of streamChunks) {
-          if (signal.aborted) {
-            aborted = true;
-            break;
+        while (toolRounds < maxToolRounds) {
+          const streamChunks = provider.chatStream(messagesForModel, signal, toolDefinitions);
+          let roundContent = "";
+          let roundToolCalls:
+            | { id: string; type: "function"; function: { name: string; arguments: string } }[]
+            | undefined;
+
+          for await (const chunk of streamChunks) {
+            if (signal.aborted) {
+              aborted = true;
+              break;
+            }
+            if (chunk.content) {
+              roundContent += chunk.content;
+              await stream.write(`data: ${chunk.content}\n\n`);
+            }
+            if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+              roundToolCalls = chunk.tool_calls;
+              break;
+            }
           }
-          if (chunk.content) {
-            fullContent += chunk.content;
-            await stream.write(`data: ${chunk.content}\n\n`);
+
+          if (roundToolCalls) {
+            // Persist the assistant turn that requested tools, plus each tool result.
+            messagesForModel.push({
+              role: "assistant",
+              content: roundContent,
+              tool_calls: roundToolCalls,
+            });
+            await insertMessage(supabase, conversation.id, {
+              role: "assistant",
+              content: roundContent,
+              tool_calls: roundToolCalls,
+            });
+
+            for (const call of roundToolCalls) {
+              const result = await executeToolCall({
+                id: call.id,
+                function: {
+                  name: call.function.name,
+                  arguments: call.function.arguments,
+                },
+              });
+              const toolMessage: Message = {
+                role: "tool",
+                content: result.content,
+                tool_call_id: result.tool_call_id,
+              };
+              messagesForModel.push(toolMessage);
+              await insertMessage(supabase, conversation.id, toolMessage);
+            }
+
+            toolRounds++;
+            continue;
           }
+
+          // No tool calls in this round: this is the final answer.
+          finalAssistantContent = roundContent;
+          break;
         }
+
         if (!aborted) {
           await stream.write("data: [DONE]\n\n");
         }
@@ -225,17 +208,17 @@ export const chatRoute = new Hono()
           // Client already disconnected.
         }
       } finally {
-        if (fullContent) {
+        if (finalAssistantContent) {
           const assistantMessage: Message = {
             role: "assistant",
-            content: fullContent,
+            content: finalAssistantContent,
           };
           await insertMessage(supabase, conversation.id, assistantMessage);
         }
 
-        const promptTokens = provider.countTokens(finalMessages);
+        const promptTokens = provider.countTokens(messagesForModel);
         const completionTokens = provider.countTokens([
-          { role: "assistant", content: fullContent },
+          { role: "assistant", content: finalAssistantContent },
         ]);
         await insertUsage(adminSupabase, {
           userId: auth.userId,
