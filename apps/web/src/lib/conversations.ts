@@ -1,10 +1,11 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import type { Message } from "@chat/shared";
+import { supabase } from "./supabase.js";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await import("./supabase.js").then((m) => m.supabase.auth.getSession());
+export async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) {
     const override = window.localStorage.getItem("__test_auth_token");
@@ -27,32 +28,57 @@ export interface Conversation {
   updated_at: string;
 }
 
+export async function loadConversations(): Promise<Conversation[]> {
+  const res = await fetch(`${apiBase}/api/conversations`, {
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to load conversations: ${res.status}`);
+  const json = (await res.json()) as { conversations: Conversation[] };
+  return json.conversations;
+}
+
+export async function loadConversationMessages(conversationId: string): Promise<Message[]> {
+  const res = await fetch(`${apiBase}/api/conversations/${conversationId}/messages`, {
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to load messages: ${res.status}`);
+  const json = (await res.json()) as { messages: Message[] };
+  return json.messages;
+}
+
+export async function deleteConversation(id: string): Promise<void> {
+  const res = await fetch(`${apiBase}/api/conversations/${id}`, {
+    method: "DELETE",
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete conversation: ${res.status}`);
+}
+
+export async function updateTitle({ id, title }: { id: string; title?: string }): Promise<string> {
+  const res = await fetch(`${apiBase}/api/conversations/${id}/title`, {
+    method: "POST",
+    headers: await authHeaders(),
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error(`Failed to update title: ${res.status}`);
+  const json = (await res.json()) as { title: string };
+  return json.title;
+}
+
 export function useConversations() {
   return createQuery(() => ({
     queryKey: ["conversations"],
-    queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/conversations`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Failed to load conversations: ${res.status}`);
-      const json = (await res.json()) as { conversations: Conversation[] };
-      return json.conversations;
-    },
+    queryFn: loadConversations,
   }));
 }
 
 export function useConversationMessages(conversationId: () => string | undefined) {
   return createQuery(() => ({
     queryKey: ["conversations", conversationId(), "messages"],
-    queryFn: async () => {
+    queryFn: () => {
       const id = conversationId();
-      if (!id) return [];
-      const res = await fetch(`${apiBase}/api/conversations/${id}/messages`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Failed to load messages: ${res.status}`);
-      const json = (await res.json()) as { messages: Message[] };
-      return json.messages;
+      if (!id) return Promise.resolve([]);
+      return loadConversationMessages(id);
     },
     enabled: !!conversationId(),
   }));
@@ -62,13 +88,7 @@ export function useDeleteConversation() {
   const queryClient = useQueryClient();
 
   return createMutation(() => ({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${apiBase}/api/conversations/${id}`, {
-        method: "DELETE",
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Failed to delete conversation: ${res.status}`);
-    },
+    mutationFn: deleteConversation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
@@ -79,16 +99,7 @@ export function useUpdateTitle() {
   const queryClient = useQueryClient();
 
   return createMutation(() => ({
-    mutationFn: async ({ id, title }: { id: string; title?: string }) => {
-      const res = await fetch(`${apiBase}/api/conversations/${id}/title`, {
-        method: "POST",
-        headers: await authHeaders(),
-        body: JSON.stringify({ title }),
-      });
-      if (!res.ok) throw new Error(`Failed to update title: ${res.status}`);
-      const json = (await res.json()) as { title: string };
-      return json.title;
-    },
+    mutationFn: updateTitle,
     onSuccess: (_title, variables) => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
       queryClient.setQueryData(["conversations"], (old: Conversation[] | undefined) => {
