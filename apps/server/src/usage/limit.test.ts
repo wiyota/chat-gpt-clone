@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkDailyBudget } from "./limit.js";
 
@@ -6,11 +6,27 @@ vi.mock("../db/usage.js", () => ({
   sumDailyUsage: vi.fn(),
 }));
 
+vi.mock("../env.js", () => ({
+  env: { DAILY_TOKEN_BUDGET: 10_000, E2E: false },
+}));
+
 import { sumDailyUsage } from "../db/usage.js";
 
 describe("checkDailyBudget", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.NODE_ENV;
+    delete process.env.SKIP_BUDGET;
+  });
+
+  afterEach(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it("allows requests that stay within the daily budget", async () => {
@@ -52,5 +68,23 @@ describe("checkDailyBudget", () => {
 
     expect(result.budget).toBe(10_000);
     expect(result.allowed).toBe(true);
+  });
+
+  it("bypasses the budget check in development", async () => {
+    process.env.NODE_ENV = "development";
+    vi.mocked(sumDailyUsage).mockResolvedValue(100_000);
+
+    const result = await checkDailyBudget({} as SupabaseClient, "user-1", 1_000);
+
+    expect(result).toEqual({ allowed: true, todayUsage: 100_000, budget: 10_000 });
+  });
+
+  it("bypasses the budget check when SKIP_BUDGET is set", async () => {
+    process.env.SKIP_BUDGET = "true";
+    vi.mocked(sumDailyUsage).mockResolvedValue(100_000);
+
+    const result = await checkDailyBudget({} as SupabaseClient, "user-1", 1_000);
+
+    expect(result).toEqual({ allowed: true, todayUsage: 100_000, budget: 10_000 });
   });
 });
