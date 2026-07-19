@@ -7,11 +7,15 @@
     "dev": "pnpm --parallel -r dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @chat/web test:e2e",
+    "test:e2e:ui": "pnpm --filter @chat/web test:e2e:ui",
     "typecheck": "pnpm -r typecheck",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt \"**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
-    "format:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx,mjs,cjs}\""
+    "format:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
+    "ci:check": "pnpm --filter @chat/shared build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
+    "clean": "pnpm -r exec rm -rf dist .turbo"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
