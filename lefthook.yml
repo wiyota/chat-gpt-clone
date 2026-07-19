@@ -1,6 +1,8 @@
 pre-commit:
   parallel: true
   commands:
+    gitleaks:
+      run: gitleaks git --staged . --verbose --redact
     lint:
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
       run: pnpm exec oxlint {staged_files}

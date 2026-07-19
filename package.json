@@ -16,6 +16,7 @@
     "format:check": "oxfmt --check \"**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
     "ci:check": "pnpm --filter @chat/shared build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "clean": "pnpm -r exec rm -rf dist .turbo",
+    "scan:secrets": "gitleaks detect --source . --verbose --redact",
     "prepare": "lefthook install"
   },
   "devDependencies": {
