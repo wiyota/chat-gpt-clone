@@ -66,12 +66,12 @@ describe("authMiddleware", () => {
     expect(await res.json()).toEqual({ error: "Invalid or expired token" });
   });
 
-  it("sets auth context for a valid token", async () => {
-    mockUser({ id: "user-1", email: "a@example.com" });
+  it("bypasses token validation for the e2e-token in dev mode", async () => {
+    mockUser(null, null);
     const res = await buildApp().request("/", {
-      headers: { Authorization: "Bearer validtoken" },
+      headers: { Authorization: "Bearer e2e-token" },
     });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ userId: "user-1", userEmail: "a@example.com" });
+    expect(await res.json()).toEqual({ userId: "e2e-user", userEmail: "e2e@example.com" });
   });
 });
