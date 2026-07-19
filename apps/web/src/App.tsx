@@ -215,16 +215,26 @@ export function App() {
     const decoder = new TextDecoder();
     let assistantContent = "";
     let finalConversationId: string | undefined;
+    let sseBuffer = "";
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6);
+        sseBuffer += decoder.decode(value, { stream: true });
+        const messages = sseBuffer.split("\n\n");
+        sseBuffer = messages.pop() ?? "";
+
+        for (const message of messages) {
+          if (!message.trim()) continue;
+          const dataLines = message
+            .split("\n")
+            .filter((line) => line.startsWith("data: "))
+            .map((line) => line.slice(6));
+          if (dataLines.length === 0) continue;
+
+          const data = dataLines.join("\n");
 
           if (data === "[DONE]") continue;
           if (data === "[ERROR]") {

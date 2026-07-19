@@ -150,7 +150,11 @@ export const chatRoute = new Hono()
             }
             if (chunk.content) {
               roundContent += chunk.content;
-              await stream.write(`data: ${chunk.content}\n\n`);
+              const lines = chunk.content.split("\n");
+              for (const line of lines) {
+                await stream.write(`data: ${line}\n`);
+              }
+              await stream.write("\n");
             }
             if (chunk.tool_calls && chunk.tool_calls.length > 0) {
               roundToolCalls = chunk.tool_calls;

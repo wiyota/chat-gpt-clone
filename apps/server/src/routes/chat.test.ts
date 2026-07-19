@@ -384,4 +384,20 @@ describe("chatRoute", () => {
     expect(body).toContain("data: OK");
     expect(body).toContain("data: [DONE]");
   });
+
+  it("encodes multiline stream chunks per SSE line", async () => {
+    setupMocks();
+    const app = buildApp(
+      createMockLLMProvider({
+        response: "",
+        streamChunks: ["Line one\nLine two\nLine three"],
+      }),
+    );
+    const res = await request(app, { messages: [{ role: "user", content: "Hi" }] });
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("data: Line one");
+    expect(body).toContain("data: Line two");
+    expect(body).toContain("data: Line three");
+  });
 });
