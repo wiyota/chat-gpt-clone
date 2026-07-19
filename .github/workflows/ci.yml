@@ -114,6 +114,7 @@ jobs:
           E2E: "true"
           SUPABASE_URL: http://localhost:54321
           SUPABASE_SECRET_KEY: test-secret
+          SUPABASE_PUBLISHABLE_KEY: test-publishable-key
           OPENAI_API_KEY: test-key
           OPENAI_MODEL: gpt-4o-mini
           LLM_PROVIDER: openai

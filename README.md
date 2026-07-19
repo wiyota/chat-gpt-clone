@@ -106,7 +106,10 @@ cp apps/web/.env.example apps/web/.env
 ```env
 PORT=3000
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SECRET_KEY=your-service-role-key
+# Server-only secret key; used only for privileged admin operations.
+SUPABASE_SECRET_KEY=sb_secret_...
+# Used with each user's JWT so RLS applies to user-scoped server requests.
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 OPENAI_API_KEY=sk-proj-...
 OPENAI_MODEL=gpt-4o-mini
 CORS_ORIGIN=http://localhost:5173
@@ -121,13 +124,15 @@ MEMORY_MAX_FACTS=10
 ```env
 VITE_API_BASE_URL=http://localhost:3000
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-> > 本番運用やチーム開発では、`.env` を Git にコミットせず、[dotenvx](https://dotenvx.com/)、[GitHub Secrets](https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions)、[Doppler](https://www.doppler.com/) などを使って暗号化・集中管理することを推奨します。
+> 本番運用やチーム開発では、`.env` を Git にコミットせず、[dotenvx](https://dotenvx.com/)、[GitHub Secrets](https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions)、[Doppler](https://www.doppler.com/) などを使って暗号化・集中管理することを推奨します。
 
 ## セキュリティ運用メモ
 
+- ユーザー操作を行う server-side Supabase client は、publishable key とユーザー JWT を使用します。これにより既存の RLS ポリシーがサーバー経由のリクエストにも適用されます。
+- `SUPABASE_SECRET_KEY`（secret/service-role key）は usage 記録などの明示的な管理操作に限って使用します。secret key は RLS を bypass するため、ブラウザやログに露出させないでください。
 - 本番環境では、サーバー前面のリバースプロキシまたは CDN で以下を追加してください。
   - HTTPS / HSTS
   - `Content-Security-Policy`（SolidJS + Vite では `'unsafe-inline'` / `'unsafe-eval'` が必要になりやすいため、nonce ベースまたは厳格なポリシー設計が推奨されます）

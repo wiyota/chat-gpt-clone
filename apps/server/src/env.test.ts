@@ -15,6 +15,7 @@ describe("env schema", () => {
       ...originalEnv,
       SUPABASE_URL: "http://localhost:54321",
       SUPABASE_SECRET_KEY: "test-secret",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
       OPENAI_API_KEY: "test-key",
     };
   });
@@ -27,6 +28,7 @@ describe("env schema", () => {
     const { env } = await loadEnv();
     expect(env.SUPABASE_URL).toBe("http://localhost:54321");
     expect(env.SUPABASE_SECRET_KEY).toBe("test-secret");
+    expect(env.SUPABASE_PUBLISHABLE_KEY).toBe("test-publishable-key");
     expect(env.OPENAI_API_KEY).toBe("test-key");
   });
 
@@ -62,6 +64,12 @@ describe("env schema", () => {
 
   it("throws when SUPABASE_SECRET_KEY is missing", async () => {
     delete process.env.SUPABASE_SECRET_KEY;
+
+    await expect(loadEnv()).rejects.toThrow();
+  });
+
+  it("throws when SUPABASE_PUBLISHABLE_KEY is missing", async () => {
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
 
     await expect(loadEnv()).rejects.toThrow();
   });
