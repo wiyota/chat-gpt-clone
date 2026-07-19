@@ -88,11 +88,20 @@ test.describe("authenticated conversations", () => {
         });
       }
 
-      if (url.pathname.match(/^\/api\/conversations\/[^/]+\/messages$/) && method === "GET") {
+      const messagesMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)\/messages$/);
+      if (messagesMatch && method === "GET") {
+        const id = messagesMatch[1];
+        const conversation = conversations.find((c) => c.id === id);
+        const messages = conversation
+          ? [
+              { role: "user", content: conversation.title },
+              { role: "assistant", content: "Mock response" },
+            ]
+          : [];
         return route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ messages: [] }),
+          body: JSON.stringify({ messages }),
         });
       }
 
