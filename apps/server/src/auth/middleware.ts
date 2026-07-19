@@ -18,18 +18,19 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     return c.json({ error: "Invalid Authorization header" }, 401);
   }
 
+  if (token === "e2e-token") {
+    c.set("auth", {
+      userId: "e2e-user",
+      userEmail: "e2e@example.com",
+    } satisfies AuthContext);
+    await next();
+    return;
+  }
+
   const supabase = createUserClient(token);
   const { data, error } = await supabase.auth.getUser();
 
   if (error || !data.user) {
-    if (token === "e2e-token") {
-      c.set("auth", {
-        userId: "e2e-user",
-        userEmail: "e2e@example.com",
-      } satisfies AuthContext);
-      await next();
-      return;
-    }
     return c.json({ error: "Invalid or expired token" }, 401);
   }
 

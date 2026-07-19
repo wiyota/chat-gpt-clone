@@ -66,11 +66,11 @@ describe("authMiddleware", () => {
     expect(await res.json()).toEqual({ error: "Invalid or expired token" });
   });
 
-  it("bypasses token validation for the e2e-token in dev mode", async () => {
-    mockUser(null, null);
+  it("bypasses Supabase entirely for the e2e-token", async () => {
     const res = await buildApp().request("/", {
       headers: { Authorization: "Bearer e2e-token" },
     });
+    expect(vi.mocked(createUserClient)).not.toHaveBeenCalled();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ userId: "e2e-user", userEmail: "e2e@example.com" });
   });
