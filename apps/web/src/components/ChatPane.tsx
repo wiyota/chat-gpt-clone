@@ -43,7 +43,7 @@ function ToolMarker(props: { message: Message }) {
   );
 }
 
-function shouldRender(message: Message): boolean {
+export function shouldRender(message: Message): boolean {
   if (message.role === "tool") return false;
   if (message.role === "assistant" && !message.content && !message.tool_calls?.length) {
     return false;
@@ -51,7 +51,7 @@ function shouldRender(message: Message): boolean {
   return true;
 }
 
-function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled: boolean) {
+export function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled: boolean) {
   const isMac = navigator.platform.toLowerCase().includes("mac");
   const isMeta = isMac ? e.metaKey : e.ctrlKey;
   if (e.key === "Enter" && isMeta && !disabled) {
@@ -60,7 +60,7 @@ function handleKeyDown(e: KeyboardEvent, onSubmit: (e: Event) => void, disabled:
   }
 }
 
-export function ChatPane(props: Props) {
+function ChatPaneInternal(props: Props) {
   const submitDisabled = () => props.isLoading || !!props.quotaError || !props.input.trim();
 
   let scrollRef: HTMLDivElement;
@@ -207,4 +207,8 @@ export function ChatPane(props: Props) {
       </form>
     </div>
   );
+}
+
+export function ChatPane(props: Props) {
+  return ChatPaneInternal(props);
 }
