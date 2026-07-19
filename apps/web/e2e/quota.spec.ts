@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import type { MockConversation } from "./conversations.spec";
+
+interface MockConversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
 
 async function fillChatInput(page: import("@playwright/test").Page, value: string) {
   const input = page.locator("textarea[placeholder='Message...']");

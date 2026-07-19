@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { Type } from "@sinclair/typebox";
 import { OpenAIAdapter } from "./openai.js";
 import type { Message } from "@chat/shared";
 
@@ -99,7 +100,7 @@ describe("OpenAIAdapter", () => {
             function: {
               name: "getCurrentTime",
               description: "Return current time",
-              parameters: { type: "object", properties: {} },
+              parameters: Type.Object({}),
             },
           },
         ],

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-interface MockConversation {
+export interface MockConversation {
   id: string;
   title: string;
   created_at: string;

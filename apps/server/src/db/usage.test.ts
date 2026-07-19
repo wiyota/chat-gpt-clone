@@ -147,7 +147,7 @@ describe("sumDailyUsage", () => {
   });
 
   it("filters by start of today in UTC", async () => {
-    const gte = vi.fn(() =>
+    const gte = vi.fn((_column: string, _value: string) =>
       Promise.resolve({
         data: [{ total_tokens: 100 }],
         error: null,
@@ -166,10 +166,10 @@ describe("sumDailyUsage", () => {
 
     await sumDailyUsage(supabase, "user-1");
 
-    const [column, value] = gte.mock.calls[0];
+    const [column, value] = gte.mock.calls[0] as [string, string];
     expect(column).toBe("created_at");
 
-    const date = new Date(value as string);
+    const date = new Date(value);
     const now = new Date();
     expect(date.getUTCHours()).toBe(0);
     expect(date.getUTCMinutes()).toBe(0);

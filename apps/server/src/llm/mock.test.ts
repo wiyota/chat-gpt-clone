@@ -168,8 +168,8 @@ describe("createMockLLMProvider", () => {
   });
 });
 
-async function collectStream(stream: AsyncIterable<{ content: string; done: boolean }>) {
-  const chunks: { content: string; done: boolean }[] = [];
+async function collectStream(stream: AsyncIterable<{ content: string; done?: boolean }>) {
+  const chunks: { content: string; done?: boolean }[] = [];
   for await (const chunk of stream) {
     chunks.push(chunk);
   }

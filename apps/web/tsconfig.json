@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "types": ["vite/client"],
@@ -10,5 +10,5 @@
       "@/*": ["./src/*"],
     },
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "e2e/**/*"],
 }

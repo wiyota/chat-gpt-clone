@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@chat/shared";
 import type { LLMAdapter } from "../llm/provider.js";
@@ -26,7 +26,9 @@ function createMockProvider(): LLMAdapter {
     chat: vi.fn(async () => ({ content: "Summary text", promptTokens: 0, completionTokens: 0 })),
     chatStream: async function* () {},
     chatWithTools: vi.fn(),
-    countTokens: vi.fn((messages) => messages.reduce((sum, m) => sum + m.content.length, 0)),
+    countTokens: vi.fn((messages: { content: string }[]) =>
+      messages.reduce((sum, m) => sum + m.content.length, 0),
+    ),
   };
 }
 

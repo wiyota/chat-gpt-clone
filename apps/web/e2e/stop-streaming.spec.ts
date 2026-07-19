@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import type { MockConversation } from "./conversations.spec";
+
+interface MockConversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
 
 async function fillChatInput(page: import("@playwright/test").Page, value: string) {
   const input = page.locator("textarea[placeholder='Message...']");
@@ -43,7 +49,7 @@ test.describe("streaming stop", () => {
         });
 
         // Keep the response body streaming for a while so the stop button stays visible.
-        const stream = new ReadableStream({
+        const stream = new ReadableStream<Uint8Array>({
           start(controller) {
             controller.enqueue(new TextEncoder().encode(`data: conversationId:${id}\n\n`));
             controller.enqueue(new TextEncoder().encode("data: First chunk\n\n"));
