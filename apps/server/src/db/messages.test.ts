@@ -29,12 +29,15 @@ function createMockSupabase(
             ...base,
             eq: vi.fn(() => ({
               ...base,
-              order: vi.fn(() =>
-                Promise.resolve({
-                  data: options.messagesData ?? [],
-                  error: options.messagesError ?? null,
-                }),
-              ),
+              order: vi.fn(() => ({
+                ...base,
+                limit: vi.fn(() =>
+                  Promise.resolve({
+                    data: options.messagesData ?? [],
+                    error: options.messagesError ?? null,
+                  }),
+                ),
+              })),
             })),
           })),
           insert: vi.fn(() => ({
@@ -121,8 +124,8 @@ describe("loadMessages", () => {
   it("loads ordered messages for a conversation", async () => {
     const supabase = createMockSupabase({
       messagesData: [
-        { role: "user", content: "hi" },
         { role: "assistant", content: "hello" },
+        { role: "user", content: "hi" },
       ],
     });
 

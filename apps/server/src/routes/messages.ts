@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient } from "../supabase/client.js";
+import { MAX_MESSAGES_PER_LOAD } from "../db/messages.js";
 
 function getBearerToken(header: string | undefined): string | null {
   if (!header) return null;
@@ -41,12 +42,13 @@ export const messagesRoute = new Hono().use(authMiddleware).get("/", async (c) =
     .from("messages")
     .select("role, content, created_at")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(MAX_MESSAGES_PER_LOAD);
 
   if (error) {
     console.error("load messages error:", error);
     return c.json({ error: "Failed to load messages" }, 500);
   }
 
-  return c.json({ messages: data ?? [] });
+  return c.json({ messages: (data ?? []).reverse() });
 });

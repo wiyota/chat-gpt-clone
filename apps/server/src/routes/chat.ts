@@ -21,6 +21,8 @@ import { consumeChatRequest } from "../usage/rateLimit.js";
 
 const MAX_CHAT_MESSAGES = 50;
 const MAX_MESSAGE_LENGTH = 10_000;
+const MAX_TOOL_ROUNDS = 3;
+const MAX_TOOL_RESULT_TOKENS = 128;
 
 const chatSchema = Type.Object({
   messages: Type.Array(
@@ -176,12 +178,19 @@ export const chatRoute = new Hono()
     const toolDefinitions = getToolDefinitions();
     const messagesForModel: Message[] = [...contextMessages];
     let toolRounds = 0;
-    const maxToolRounds = 3;
 
-    const estimatedTokens = provider.countTokens([
+    const estimatedPromptTokens = provider.countTokens([
       ...messagesForModel,
       userMessage ?? { role: "user", content: "" },
     ]);
+
+    // Reserve a conservative upper bound for the whole request. Each tool
+    // round resends the accumulated prompt, adds another completion, and adds
+    // a bounded tool result. Reserving only the first prompt would let a
+    // multi-round request exceed the daily budget.
+    const estimatedTokens =
+      (MAX_TOOL_ROUNDS + 1) * (estimatedPromptTokens + env.MAX_COMPLETION_TOKENS) +
+      MAX_TOOL_ROUNDS * MAX_TOOL_RESULT_TOKENS;
 
     const budgetCheck = await checkDailyBudget(supabase, auth.userId, estimatedTokens);
     if (!budgetCheck.allowed) {
@@ -223,7 +232,7 @@ export const chatRoute = new Hono()
       }
 
       try {
-        while (toolRounds < maxToolRounds) {
+        while (toolRounds < MAX_TOOL_ROUNDS) {
           const streamChunks = provider.chatStream(messagesForModel, signal, toolDefinitions);
           let roundContent = "";
           let roundToolCalls:

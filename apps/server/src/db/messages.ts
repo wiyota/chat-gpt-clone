@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message } from "@chat/shared";
 
+// Keep database work and API responses bounded even when a user has a very
+// long-lived conversation. The newest messages are retained for context.
+export const MAX_MESSAGES_PER_LOAD = 1_000;
+
 export interface StoredMessage {
   id: string;
   conversation_id: string;
@@ -44,12 +48,13 @@ export async function loadMessages(
     .from("messages")
     .select("role, content, tool_calls, tool_call_id")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(MAX_MESSAGES_PER_LOAD);
 
   if (error) {
     console.error("loadMessages error:", error);
     return [];
   }
 
-  return (data ?? []) as Message[];
+  return ((data ?? []) as Message[]).reverse();
 }

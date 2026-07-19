@@ -25,7 +25,11 @@ function createMockClient(
   const messagesBuilder = {
     select: vi.fn(() => messagesBuilder),
     eq: vi.fn(() => messagesBuilder),
-    order: vi.fn(() => Promise.resolve({ data: options.data ?? [], error: options.error ?? null })),
+    order: vi.fn(() => ({
+      limit: vi.fn(() =>
+        Promise.resolve({ data: options.data ?? [], error: options.error ?? null }),
+      ),
+    })),
   };
 
   return {
@@ -63,8 +67,8 @@ describe("messagesRoute", () => {
   it("returns messages for a conversation", async () => {
     mockClient({
       data: [
-        { role: "user", content: "hi", created_at: "t1" },
         { role: "assistant", content: "hello", created_at: "t2" },
+        { role: "user", content: "hi", created_at: "t1" },
       ],
     });
     const res = await messagesRoute.request("/", {
