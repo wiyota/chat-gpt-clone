@@ -87,8 +87,13 @@ interface Props {
   onSignOut: () => void;
 }
 
-export function ConversationSidebar(props: Props) {
-  const { preference, setMode } = createColorMode();
+export function conversationItemClass(isActive: boolean): string {
+  return `group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
+    isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+  }`;
+}
+
+export function createRenameDialog(onRename: (id: string, title: string) => void) {
   const [renameId, setRenameId] = createSignal<string | null>(null);
   const [renameTitle, setRenameTitle] = createSignal("");
 
@@ -107,10 +112,25 @@ export function ConversationSidebar(props: Props) {
     const id = renameId();
     const title = renameTitle().trim();
     if (id && title) {
-      props.onRename(id, title);
+      onRename(id, title);
     }
     closeRename();
   };
+
+  return {
+    renameId,
+    renameTitle,
+    setRenameTitle,
+    openRename,
+    closeRename,
+    submitRename,
+  };
+}
+
+export function ConversationSidebar(props: Props) {
+  const { preference, setMode } = createColorMode();
+  const { renameId, renameTitle, setRenameTitle, openRename, closeRename, submitRename } =
+    createRenameDialog(props.onRename);
 
   return (
     <aside class="sticky top-0 flex h-screen w-64 flex-col overflow-hidden border-r bg-muted/30">
@@ -134,11 +154,7 @@ export function ConversationSidebar(props: Props) {
             <For each={props.conversations}>
               {(conversation) => (
                 <li
-                  class={`group flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
-                    conversation.id === props.activeId
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent/50"
-                  }`}
+                  class={conversationItemClass(conversation.id === props.activeId)}
                   onClick={() => props.onSelect(conversation.id)}
                 >
                   <Show
