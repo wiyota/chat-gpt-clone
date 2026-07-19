@@ -8,7 +8,7 @@ import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient, createAdminClient } from "../supabase/client.js";
 import { findOrCreateConversation } from "../db/conversations.js";
 import { insertMessage } from "../db/messages.js";
-import { insertUsage } from "../db/usage.js";
+import { finalizeUsage, insertUsage } from "../db/usage.js";
 import { loadMemories, insertMemory } from "../db/memories.js";
 import { buildContext } from "../context/buildContext.js";
 import { createLLMProvider } from "../llm/index.js";
@@ -17,6 +17,7 @@ import { extractFacts } from "../memory/extractFacts.js";
 import { checkDailyBudget } from "../usage/limit.js";
 import { getToolDefinitions, executeToolCall } from "../tools/registry.js";
 import { env } from "../env.js";
+import { consumeChatRequest } from "../usage/rateLimit.js";
 
 const MAX_CHAT_MESSAGES = 50;
 const MAX_MESSAGE_LENGTH = 10_000;
@@ -74,10 +75,15 @@ async function persistFacts(
     const existingMemories = await loadMemories(supabase, userId, env.MEMORY_MAX_FACTS);
     const existingFacts = new Set(existingMemories.map((m) => m.fact));
     const facts = await extractFacts(provider, userText);
-    for (const fact of facts) {
-      if (!existingFacts.has(fact)) {
-        await insertMemory(supabase, userId, fact);
-        existingFacts.add(fact);
+    for (const fact of facts.slice(0, 5)) {
+      const normalizedFact = fact.trim().slice(0, 500);
+      if (
+        normalizedFact &&
+        !existingFacts.has(normalizedFact) &&
+        existingFacts.size < env.MEMORY_MAX_FACTS
+      ) {
+        await insertMemory(supabase, userId, normalizedFact);
+        existingFacts.add(normalizedFact);
       }
     }
   } catch (err) {
@@ -111,6 +117,14 @@ export const chatRoute = new Hono()
     }
 
     const userMessage = messages[messages.length - 1];
+    if (!userMessage || userMessage.role !== "user") {
+      return c.json({ error: "The final message must be from the user" }, 400);
+    }
+
+    if (!consumeChatRequest(auth.userId)) {
+      return c.json({ error: "Too many chat requests" }, 429);
+    }
+
     const initialTitle = userMessage?.content.slice(0, 50);
 
     const conversation = await findOrCreateConversation(
@@ -133,12 +147,6 @@ export const chatRoute = new Hono()
     }
 
     const provider = c.get("llmProvider") ?? createLLMProvider();
-
-    // Extract facts in the background so streaming starts immediately.
-    const factTask =
-      userMessage?.role === "user"
-        ? persistFacts(provider, supabase, auth.userId, userMessage.content)
-        : Promise.resolve();
 
     const contextMessages = await buildContext(supabase, conversation.id, auth.userId, provider);
 
@@ -164,6 +172,9 @@ export const chatRoute = new Hono()
         429,
       );
     }
+
+    // Extract facts only after the request has passed the budget gate.
+    const factTask = persistFacts(provider, supabase, auth.userId, userMessage.content);
 
     return stream(c, async (stream: StreamingApi) => {
       c.header("Content-Type", "text/event-stream");
@@ -273,13 +284,21 @@ export const chatRoute = new Hono()
         const completionTokens = provider.countTokens([
           { role: "assistant", content: finalAssistantContent },
         ]);
-        await insertUsage(adminSupabase, {
-          userId: auth.userId,
-          conversationId: conversation.id,
-          model: env.OPENAI_MODEL as string,
-          promptTokens,
-          completionTokens,
-        });
+        if (budgetCheck.reservationId) {
+          await finalizeUsage(adminSupabase, budgetCheck.reservationId, {
+            model: env.OPENAI_MODEL as string,
+            promptTokens,
+            completionTokens,
+          });
+        } else {
+          await insertUsage(adminSupabase, {
+            userId: auth.userId,
+            conversationId: conversation.id,
+            model: env.OPENAI_MODEL as string,
+            promptTokens,
+            completionTokens,
+          });
+        }
 
         await factTask;
 

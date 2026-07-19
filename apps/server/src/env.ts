@@ -54,3 +54,17 @@ export const env = Value.Decode(envSchema, {
   MEMORY_MAX_FACTS: process.env.MEMORY_MAX_FACTS ?? "10",
   E2E: process.env.E2E ?? "false",
 });
+
+export function assertProductionSecurity(): void {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const unsafeFlags = [
+    env.E2E && "E2E",
+    process.env.SKIP_BUDGET === "true" && "SKIP_BUDGET",
+    process.env.LOG_LLM_STREAM === "true" && "LOG_LLM_STREAM",
+  ].filter(Boolean);
+
+  if (unsafeFlags.length > 0) {
+    throw new Error(`Unsafe production flags enabled: ${unsafeFlags.join(", ")}`);
+  }
+}

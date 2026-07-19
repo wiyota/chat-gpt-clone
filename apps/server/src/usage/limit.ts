@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sumDailyUsage } from "../db/usage.js";
+import { reserveDailyUsage, sumDailyUsage } from "../db/usage.js";
 import { env } from "../env.js";
 
 export interface BudgetCheck {
   allowed: boolean;
   todayUsage: number;
   budget: number;
+  reservationId?: string;
 }
 
 export async function checkDailyBudget(
@@ -24,9 +25,12 @@ export async function checkDailyBudget(
   if (bypassBudget) {
     return { allowed: true, todayUsage, budget };
   }
+
+  const reservationId = await reserveDailyUsage(supabase, userId, estimatedTokens, budget);
   return {
-    allowed: todayUsage + estimatedTokens <= budget,
+    allowed: reservationId !== null,
     todayUsage,
     budget,
+    reservationId: reservationId ?? undefined,
   };
 }

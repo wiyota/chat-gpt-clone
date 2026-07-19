@@ -11,6 +11,54 @@ export interface UsageRow {
   created_at: string;
 }
 
+export async function reserveDailyUsage(
+  supabase: SupabaseClient,
+  userId: string,
+  estimatedTokens: number,
+  budget: number,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("reserve_daily_usage", {
+    p_user_id: userId,
+    p_estimated_tokens: estimatedTokens,
+    p_daily_budget: budget,
+  });
+
+  if (error) {
+    console.error("reserveDailyUsage error:", error);
+    return null;
+  }
+
+  return typeof data === "string" ? data : null;
+}
+
+export async function finalizeUsage(
+  supabase: SupabaseClient,
+  reservationId: string,
+  options: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+  },
+): Promise<boolean> {
+  const totalTokens = options.promptTokens + options.completionTokens;
+  const { error } = await supabase
+    .from("usage")
+    .update({
+      model: options.model,
+      prompt_tokens: options.promptTokens,
+      completion_tokens: options.completionTokens,
+      total_tokens: totalTokens,
+    })
+    .eq("id", reservationId);
+
+  if (error) {
+    console.error("finalizeUsage error:", error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function insertUsage(
   supabase: SupabaseClient,
   options: {

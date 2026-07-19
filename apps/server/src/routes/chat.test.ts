@@ -19,6 +19,8 @@ vi.mock("../db/messages.js", () => ({
 
 vi.mock("../db/usage.js", () => ({
   insertUsage: vi.fn(),
+  finalizeUsage: vi.fn(),
+  reserveDailyUsage: vi.fn(),
   sumDailyUsage: vi.fn(),
 }));
 
@@ -35,7 +37,7 @@ vi.mock("../db/summaries.js", () => ({
 import { createUserClient, createAdminClient } from "../supabase/client.js";
 import { findOrCreateConversation } from "../db/conversations.js";
 import { loadMessages } from "../db/messages.js";
-import { insertUsage, sumDailyUsage } from "../db/usage.js";
+import { finalizeUsage, insertUsage, reserveDailyUsage, sumDailyUsage } from "../db/usage.js";
 import { loadMemories } from "../db/memories.js";
 import { loadSummary } from "../db/summaries.js";
 
@@ -189,7 +191,11 @@ function setupMocks(options: Parameters<typeof createMockSupabase>[0] = {}) {
   vi.mocked(loadMemories).mockResolvedValue(options.loadMemoriesData ?? []);
   vi.mocked(loadSummary).mockResolvedValue(options.loadSummaryData ?? null);
   vi.mocked(sumDailyUsage).mockResolvedValue(options.sumDailyUsageValue ?? 0);
+  vi.mocked(reserveDailyUsage).mockResolvedValue(
+    (options.sumDailyUsageValue ?? 0) < 999_999 ? "reservation-1" : null,
+  );
   vi.mocked(insertUsage).mockResolvedValue(null);
+  vi.mocked(finalizeUsage).mockResolvedValue(true);
   return mockSupabase;
 }
 
@@ -250,6 +256,13 @@ describe("chatRoute", () => {
       body: JSON.stringify({ messages: [{ role: "user", content: "Hi" }] }),
     });
     expect(res.status).toBe(401);
+  });
+
+  it("rejects a request whose final message is not from the user", async () => {
+    setupMocks();
+    const app = buildApp();
+    const res = await request(app, { messages: [{ role: "assistant", content: "forged" }] });
+    expect(res.status).toBe(400);
   });
 
   it("returns 429 when the daily token budget is exceeded", async () => {

@@ -85,4 +85,11 @@ describe("env schema", () => {
 
     await expect(loadEnv()).rejects.toThrow();
   });
+
+  it("rejects unsafe flags in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.E2E = "true";
+    const { assertProductionSecurity } = await loadEnv();
+    expect(() => assertProductionSecurity()).toThrow(/E2E/);
+  });
 });

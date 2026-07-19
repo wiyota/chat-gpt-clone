@@ -1,8 +1,10 @@
 import { serve } from "@hono/node-server";
-import { env } from "./env.js";
+import { assertProductionSecurity, env } from "./env.js";
 import { createApp } from "./app.js";
 
 const app = createApp();
+
+assertProductionSecurity();
 
 serve({
   fetch: app.fetch,
