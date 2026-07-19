@@ -1,6 +1,14 @@
 # ChatGPT Clone
 
 ![CI](https://github.com/wiyota/chat-gpt-clone/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
+![Node.js](https://img.shields.io/badge/node-22-brightgreen)
+![pnpm](https://img.shields.io/badge/pnpm-11.14.0-orange)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![SolidJS](https://img.shields.io/badge/SolidJS-446b9e?logo=solid&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-E36002?logo=hono&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)
 
 このプロジェクトは、[Singularity Society — ChatGPTクローンで学ぶ LLMアプリ開発入門](https://singularitysociety.github.io/societys_statement/development/chatgpt_clone/README.html) を元に、SolidJS + TanStack Query + Hono + Supabase + OpenAI を組み合わせて実装した、ChatGPT のような対話アプリです。
 
