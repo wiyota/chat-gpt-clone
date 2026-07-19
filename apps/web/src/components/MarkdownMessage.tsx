@@ -8,8 +8,35 @@ interface Props {
 
 export function MarkdownMessage(props: Props) {
   const html = createMemo(() => {
-    const raw = marked.parse(props.content, { async: false }) as string;
-    return DOMPurify.sanitize(raw);
+    const raw = marked.parse(props.content, { async: false, breaks: true }) as string;
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        "p",
+        "br",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "ul",
+        "ol",
+        "li",
+        "pre",
+        "code",
+        "blockquote",
+        "a",
+        "strong",
+        "em",
+        "hr",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+      ],
+    });
   });
 
   return <div class="markdown-body" innerHTML={html()} />;

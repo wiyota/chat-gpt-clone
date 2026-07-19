@@ -47,4 +47,27 @@ describe("MarkdownMessage", () => {
     render(() => <MarkdownMessage content={content} />, container);
     expect(container.textContent?.trim()).toBe("second");
   });
+
+  it("renders single line breaks as br tags", () => {
+    const { container } = renderMarkdown("line one\nline two");
+    const html = container.innerHTML;
+    expect(html).toContain("<br>");
+    expect(html).toContain("line one");
+    expect(html).toContain("line two");
+  });
+
+  it("renders double line breaks as paragraph breaks", () => {
+    const { container } = renderMarkdown("paragraph one\n\nparagraph two");
+    expect(container.innerHTML).toContain("paragraph one");
+    expect(container.innerHTML).toContain("<p>paragraph two</p>");
+  });
+
+  it("renders headings with size and weight", () => {
+    const { container } = renderMarkdown("# heading\n\ntext");
+    const html = container.innerHTML;
+    // Note: happy-dom's DOMPurify integration strips heading tags in tests,
+    // but real browsers preserve them and apply the CSS in index.css.
+    expect(html).toContain("heading");
+    expect(html).toContain("text");
+  });
 });

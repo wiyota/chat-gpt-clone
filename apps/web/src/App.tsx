@@ -58,7 +58,15 @@ export function App() {
 
   const messages = () => {
     if (isStreaming()) return liveMessages();
-    if (liveMessages().length > 0) return liveMessages();
+    if (liveMessages().length > 0) {
+      // Once the persisted query contains the assistant response, prefer it so we
+      // don't render the same message twice during the live -> persisted handoff.
+      const persisted = messagesQuery.data ?? [];
+      if (persisted.some((m) => m.role === "assistant")) {
+        return persisted;
+      }
+      return liveMessages();
+    }
     if (activeConversationId() === undefined) return pendingMessages();
     return messagesQuery.data ?? [];
   };
