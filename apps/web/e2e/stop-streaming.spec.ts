@@ -49,26 +49,16 @@ test.describe("streaming stop", () => {
         });
 
         // Keep the response body streaming for a while so the stop button stays visible.
-        const stream = new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode(`data: conversationId:${id}\n\n`));
-            controller.enqueue(new TextEncoder().encode("data: First chunk\n\n"));
-            // Periodically send whitespace to keep the connection alive.
-            const interval = setInterval(() => {
-              controller.enqueue(new TextEncoder().encode("data: \n\n"));
-            }, 100);
-            // Clean up after a reasonable test duration.
-            setTimeout(() => {
-              clearInterval(interval);
-              controller.close();
-            }, 10_000);
-          },
-        });
+        const chunks = [`data: conversationId:${id}\n\n`, "data: First chunk\n\n"];
+        // Periodically send whitespace to keep the connection alive.
+        for (let i = 0; i < 50; i++) {
+          chunks.push("data: \n\n");
+        }
         return route.fulfill({
           status: 200,
-          body: stream,
+          contentType: "text/event-stream",
+          body: chunks.join(""),
           headers: {
-            "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
           },

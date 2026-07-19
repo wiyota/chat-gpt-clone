@@ -47,27 +47,15 @@ test.describe("authenticated conversations", () => {
         const now = new Date().toISOString();
         conversations.unshift({ id, title, created_at: now, updated_at: now });
 
-        const sseBody = [`data: conversationId:${id}\n\n`, "data: Mock response\n\n"].join("");
-
-        const stream = new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode(sseBody));
-            // Keep the stream open long enough for assertions to run, then close it.
-            setTimeout(() => {
-              controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-              controller.close();
-            }, 3500);
-          },
-        });
-
+        const sseBody = [
+          `data: conversationId:${id}\n\n`,
+          "data: Mock response\n\n",
+          "data: [DONE]\n\n",
+        ].join("");
         return route.fulfill({
           status: 200,
-          body: stream,
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-          },
+          contentType: "text/event-stream",
+          body: sseBody,
         });
       }
 

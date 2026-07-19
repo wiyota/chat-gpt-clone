@@ -189,19 +189,14 @@ export function App() {
     const contentType = res.headers.get("Content-Type") ?? "";
     if (contentType.includes("application/json")) {
       const body = (await res.json()) as { content: string; conversationId?: string };
-      setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: "" }]);
-      setIsStreaming(true);
       const text = body.content;
-      for (let i = 0; i < text.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 8));
-        setStreamingContent(text.slice(0, i + 1));
-      }
+      setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: text }]);
+      setStreamingContent("");
       if (body.conversationId) {
         setActiveConversationId(body.conversationId);
       }
       await messagesQuery.refetch();
       setLiveMessages([]);
-      setStreamingContent("");
       setIsStreaming(false);
       return { aborted: false, conversationId: body.conversationId };
     }
@@ -250,10 +245,13 @@ export function App() {
       setActiveConversationId(finalConversationId);
     }
 
-    await messagesQuery.refetch();
-    setLiveMessages([]);
+    // Persist the streamed assistant message so it remains visible while the
+    // persisted messages query refreshes.
+    setLiveMessages((prev) => [...prev, { role: "assistant" as const, content: assistantContent }]);
     setStreamingContent("");
     setIsStreaming(false);
+    await messagesQuery.refetch();
+    setLiveMessages([]);
     return { aborted: false, conversationId: finalConversationId };
   }
 
