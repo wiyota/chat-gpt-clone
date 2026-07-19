@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, createMemo } from "solid-js";
+import { createSignal, onMount, onCleanup, createMemo, createEffect } from "solid-js";
 
 const STORAGE_KEY = "color-mode";
 
@@ -13,9 +13,7 @@ function getStoredPreference(): ColorModePreference {
   return "auto";
 }
 
-function resolveMode(preference: ColorModePreference): ResolvedMode {
-  if (preference === "light") return "light";
-  if (preference === "dark") return "dark";
+function getSystemMode(): ResolvedMode {
   if (typeof window === "undefined") return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
@@ -31,17 +29,21 @@ function applyMode(mode: ResolvedMode) {
 
 export function createColorMode() {
   const [preference, setPreference] = createSignal<ColorModePreference>(getStoredPreference());
-  const resolved = createMemo(() => resolveMode(preference()));
+  const [systemMode, setSystemMode] = createSignal<ResolvedMode>(getSystemMode());
+  const resolved = createMemo<ResolvedMode>(() => {
+    const p = preference();
+    if (p === "light") return "light";
+    if (p === "dark") return "dark";
+    return systemMode();
+  });
+
+  createEffect(() => {
+    applyMode(resolved());
+  });
 
   onMount(() => {
-    applyMode(resolved());
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = () => {
-      if (preference() === "auto") {
-        const next = resolved();
-        applyMode(next);
-      }
-    };
+    const listener = () => setSystemMode(media.matches ? "dark" : "light");
     media.addEventListener("change", listener);
     onCleanup(() => media.removeEventListener("change", listener));
   });
@@ -49,7 +51,6 @@ export function createColorMode() {
   const setMode = (next: ColorModePreference) => {
     window.localStorage.setItem(STORAGE_KEY, next);
     setPreference(next);
-    applyMode(resolveMode(next));
   };
 
   return { preference, resolved, setMode };
