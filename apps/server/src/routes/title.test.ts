@@ -51,6 +51,7 @@ function createMockClient(ownedConversationId: string | null = "conv-1") {
   };
 
   return {
+    rpc: vi.fn(async () => ({ data: true, error: null })),
     auth: {
       getUser: vi.fn(async () => ({
         data: {

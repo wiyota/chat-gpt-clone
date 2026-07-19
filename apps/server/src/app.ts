@@ -19,6 +19,13 @@ export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
     c.header("X-Frame-Options", "DENY");
     c.header("Referrer-Policy", "strict-origin-when-cross-origin");
     c.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    c.header(
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+    );
+    if (process.env.NODE_ENV === "production") {
+      c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
     await next();
   });
 

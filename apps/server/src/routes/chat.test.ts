@@ -130,6 +130,7 @@ function createMockSupabase(
   });
 
   return {
+    rpc: vi.fn(async () => ({ data: true, error: null })),
     auth: {
       getUser: vi.fn(async () => ({
         data: {

@@ -48,12 +48,14 @@ describe("env schema", () => {
     process.env.RECENT_MESSAGES_TO_KEEP = "10";
     process.env.DAILY_TOKEN_BUDGET = "5000";
     process.env.MEMORY_MAX_FACTS = "20";
+    process.env.MAX_COMPLETION_TOKENS = "4096";
 
     const { env } = await loadEnv();
     expect(env.CONTEXT_WINDOW_TOKENS).toBe(8000);
     expect(env.RECENT_MESSAGES_TO_KEEP).toBe(10);
     expect(env.DAILY_TOKEN_BUDGET).toBe(5000);
     expect(env.MEMORY_MAX_FACTS).toBe(20);
+    expect(env.MAX_COMPLETION_TOKENS).toBe(4096);
   });
 
   it("throws when SUPABASE_URL is missing", async () => {
@@ -83,6 +85,11 @@ describe("env schema", () => {
   it("throws when SUPABASE_URL is not a valid URI", async () => {
     process.env.SUPABASE_URL = "not-a-url";
 
+    await expect(loadEnv()).rejects.toThrow();
+  });
+
+  it("rejects unsafe numeric configuration", async () => {
+    process.env.DAILY_TOKEN_BUDGET = "-1";
     await expect(loadEnv()).rejects.toThrow();
   });
 

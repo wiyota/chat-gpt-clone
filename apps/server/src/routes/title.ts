@@ -78,7 +78,7 @@ export const titleRoute = new Hono()
         return c.json({ title: pendingTitle ?? "New conversation" });
       }
 
-      if (!consumeChatRequest(auth.userId)) {
+      if (!(await consumeChatRequest(supabase, auth.userId))) {
         return c.json({ error: "Too many requests" }, 429);
       }
 

@@ -1,18 +1,25 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { consumeChatRequest, resetChatRateLimits } from "./rateLimit.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { consumeChatRequest } from "./rateLimit.js";
+
+function createClient(results: boolean[]): SupabaseClient {
+  const rpc = vi.fn(async () => ({ data: results.shift() ?? false, error: null }));
+  return { rpc } as unknown as SupabaseClient;
+}
 
 describe("chat rate limit", () => {
-  afterEach(() => resetChatRateLimits());
+  beforeEach(() => vi.restoreAllMocks());
 
-  it("allows 20 requests and rejects the next request in a window", () => {
-    for (let i = 0; i < 20; i++) {
-      expect(consumeChatRequest("user-1", 1_000)).toBe(true);
-    }
-    expect(consumeChatRequest("user-1", 1_000)).toBe(false);
+  it("uses the shared atomic limiter result", async () => {
+    const client = createClient([true, false]);
+    expect(await consumeChatRequest(client, "user-1")).toBe(true);
+    expect(await consumeChatRequest(client, "user-1")).toBe(false);
   });
 
-  it("resets after the window expires", () => {
-    for (let i = 0; i < 20; i++) consumeChatRequest("user-1", 1_000);
-    expect(consumeChatRequest("user-1", 61_001)).toBe(true);
+  it("fails closed when the shared limiter is unavailable", async () => {
+    const client = {
+      rpc: vi.fn(async () => ({ data: null, error: new Error("migration missing") })),
+    } as unknown as SupabaseClient;
+    expect(await consumeChatRequest(client, "user-1")).toBe(false);
   });
 });

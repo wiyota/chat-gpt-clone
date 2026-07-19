@@ -31,7 +31,7 @@ vi.mock("./auth/middleware.js", () => ({
 }));
 
 vi.mock("./supabase/client.js", () => ({
-  createUserClient: vi.fn(() => ({})),
+  createUserClient: vi.fn(() => ({ rpc: vi.fn(async () => ({ data: true, error: null })) })),
   createAdminClient: vi.fn(() => ({})),
 }));
 

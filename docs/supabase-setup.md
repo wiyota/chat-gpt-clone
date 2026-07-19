@@ -89,7 +89,7 @@ supabase/migrations/
 
 1. Open the **SQL Editor** from the Supabase dashboard left sidebar.
 2. Click **New query**.
-3. Copy the contents of `supabase/migrations/0001_initial_schema.sql`.
+3. Copy and run the contents of every file under `supabase/migrations/` in filename order (`0001` through `0005`).
 4. Click **Run**.
 5. Open the **Table Editor** and confirm that `conversations`, `messages`, and `usage` tables exist.
 6. Go to each table → **Policies** and confirm RLS policies are enabled.
@@ -122,6 +122,11 @@ After running the first migration:
 2. Select `conversations` or `messages`.
 3. Click **Authentication → Policies**.
 4. Confirm policies are enabled and reference `auth.uid()`.
+
+The `0005_shared_chat_rate_limit.sql` migration also creates the shared,
+atomic per-user chat request limiter. The server fails closed if this
+migration has not been applied, so apply it before starting a production
+server.
 
 ## 6. Required environment variables
 

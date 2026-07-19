@@ -11,32 +11,32 @@ FormatRegistry.Set("uri", (value) => {
   }
 });
 
+function boundedInteger(defaultValue: number, minimum: number, maximum: number) {
+  return Type.Transform(Type.Optional(Type.String({ pattern: "^[0-9]+$" })))
+    .Decode((value) => {
+      const parsed = Number(value ?? String(defaultValue));
+      if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+        throw new Error(`Expected an integer between ${minimum} and ${maximum}`);
+      }
+      return parsed;
+    })
+    .Encode((value) => String(value));
+}
+
 const envSchema = Type.Object({
-  PORT: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "3000"))
-    .Encode((value) => String(value)),
+  PORT: boundedInteger(3000, 1, 65535),
   SUPABASE_URL: Type.String({ format: "uri" }),
   SUPABASE_SECRET_KEY: Type.String({ minLength: 1 }),
   SUPABASE_PUBLISHABLE_KEY: Type.String({ minLength: 1 }),
   OPENAI_API_KEY: Type.String({ minLength: 1 }),
   OPENAI_MODEL: Type.Optional(Type.String()),
-  MAX_COMPLETION_TOKENS: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "2048"))
-    .Encode((value) => String(value)),
+  MAX_COMPLETION_TOKENS: boundedInteger(2048, 1, 128000),
   LLM_PROVIDER: Type.Optional(Type.Union([Type.Literal("openai"), Type.Literal("anthropic")])),
   CORS_ORIGIN: Type.Optional(Type.String({ format: "uri" })),
-  CONTEXT_WINDOW_TOKENS: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "4000"))
-    .Encode((value) => String(value)),
-  RECENT_MESSAGES_TO_KEEP: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "6"))
-    .Encode((value) => String(value)),
-  DAILY_TOKEN_BUDGET: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "10000"))
-    .Encode((value) => String(value)),
-  MEMORY_MAX_FACTS: Type.Transform(Type.Optional(Type.String()))
-    .Decode((value) => Number(value ?? "10"))
-    .Encode((value) => String(value)),
+  CONTEXT_WINDOW_TOKENS: boundedInteger(4000, 1, 1_000_000),
+  RECENT_MESSAGES_TO_KEEP: boundedInteger(6, 0, 50),
+  DAILY_TOKEN_BUDGET: boundedInteger(10000, 1, 10_000_000),
+  MEMORY_MAX_FACTS: boundedInteger(10, 0, 1000),
   E2E: Type.Transform(Type.Optional(Type.String()))
     .Decode((value) => value === "true")
     .Encode((value) => String(value)),
@@ -49,6 +49,7 @@ export const env = Value.Decode(envSchema, {
   SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+  MAX_COMPLETION_TOKENS: process.env.MAX_COMPLETION_TOKENS ?? "2048",
   LLM_PROVIDER: process.env.LLM_PROVIDER ?? "openai",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   CONTEXT_WINDOW_TOKENS: process.env.CONTEXT_WINDOW_TOKENS ?? "4000",

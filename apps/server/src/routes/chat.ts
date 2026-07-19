@@ -144,7 +144,7 @@ export const chatRoute = new Hono()
       return c.json({ error: "The final message must be from the user" }, 400);
     }
 
-    if (!consumeChatRequest(auth.userId)) {
+    if (!(await consumeChatRequest(supabase, auth.userId))) {
       return c.json({ error: "Too many chat requests" }, 429);
     }
 
