@@ -32,6 +32,92 @@
 | リンター       | oxlint, oxlint-tailwindcss                             |
 | フォーマッター | oxfmt                                                  |
 
+## 前提条件
+
+以下を事前にインストール・準備してください。
+
+| ツール / サービス                                              | 用途                          | インストール手順                                                                                                                                          |
+| -------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org/) 22.x                            | 実行環境                      | [公式ダウンロード](https://nodejs.org/)                                                                                                                   |
+| [pnpm](https://pnpm.io/ja/) 11.14.0 以上                       | パッケージマネージャー        | `corepack enable && corepack prepare pnpm@11.14.0 --activate` または [公式ドキュメント](https://pnpm.io/ja/installation)                                  |
+| [Supabase](https://supabase.com/) プロジェクト                 | 認証・データベース            | [Supabase ダッシュボード](https://supabase.com/dashboard)でプロジェクトを作成                                                                             |
+| [OpenAI API キー](https://platform.openai.com/)                | LLM 呼び出し                  | [API keys ページ](https://platform.openai.com/api-keys)で取得                                                                                             |
+| [Google OAuth クライアント](https://console.cloud.google.com/) | Google サインイン             | [Supabase Auth の Google プロバイダー設定](https://supabase.com/docs/guides/auth/social-login/auth-google)に従って設定                                    |
+| （推奨） [Docker](https://www.docker.com/)                     | Supabase CLI のローカル開発用 | [Docker Desktop](https://www.docker.com/products/docker-desktop) または [Supabase CLI インストール](https://supabase.com/docs/guides/cli/getting-started) |
+
+## データベーススキーマの適用
+
+Supabase プロジェクト作成後、`supabase/migrations/` 以下の SQL を実行してテーブルと RLS ポリシーを作成してください。
+
+### 方法 A: Supabase ダッシュボードの SQL Editor（学習用に最速）
+
+1. [Supabase ダッシュボード](https://supabase.com/dashboard)でプロジェクトを開く。
+2. 左サイドバーから **SQL Editor** を開き、**New query** をクリック。
+3. `supabase/migrations/0001_initial_schema.sql`、`0002_add_summaries_table.sql`、`0003_add_memories_table.sql` の内容を順番にコピーして貼り付ける。
+4. **Run** をクリック。
+5. **Table Editor** で `conversations`、`messages`、`usage`、`summaries`、`memories` などのテーブルが作成されたことを確認。
+6. 各テーブルの **Policies** で RLS が有効になっていることを確認。
+
+詳細は [`docs/supabase-setup.md`](./docs/supabase-setup.md) も参照してください。
+
+### 方法 B: Supabase CLI（継続的な開発向け）
+
+[Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) をインストール済みの場合：
+
+```sh
+# 初回のみ: ローカルプロジェクトをリモートの Supabase プロジェクトに紐付ける
+supabase link --project-ref <project-ref>
+
+# マイグレーションを適用
+supabase db push
+```
+
+新しいマイグレーションを追加する場合：
+
+```sh
+supabase migration new add_summary_column
+```
+
+上記コマンドで `supabase/migrations/` に新しい SQL ファイルが作成されます。編集後、`supabase db push` で適用できます。
+
+詳細は [`docs/supabase-setup.md`](./docs/supabase-setup.md) も参照してください。
+
+## 環境変数
+
+`.env.example` をコピーして `.env` を作成してください。
+
+```sh
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
+```
+
+コピー後、それぞれの `.env` に自分の Supabase / OpenAI の値を記入します。
+
+### apps/server/.env
+
+```env
+PORT=3000
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=your-service-role-key
+OPENAI_API_KEY=sk-proj-...
+OPENAI_MODEL=gpt-4o-mini
+CORS_ORIGIN=http://localhost:5173
+CONTEXT_WINDOW_TOKENS=4000
+RECENT_MESSAGES_TO_KEEP=6
+DAILY_TOKEN_BUDGET=10000
+MEMORY_MAX_FACTS=10
+```
+
+### apps/web/.env
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+```
+
+> 本番運用やチーム開発では、`.env` を Git にコミットせず、[dotenvx](https://dotenvx.com/)、[GitHub Secrets](https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions)、[Doppler](https://www.doppler.com/) などを使って暗号化・集中管理することを推奨します。
+
 ## 開発環境のセットアップ
 
 ```sh
@@ -56,44 +142,12 @@ pnpm dev
 pnpm test
 
 # フロントエンドの E2E テスト
-pnpm --filter @chat/web test:e2e
+pnpm test:e2e
 ```
 
 ### E2E テストについて
 
 E2E テストは実際の Supabase / OpenAI API に接続しません。ブラウザ内で `page.route` を使って API レスポンスをモックし、認証には特別な `e2e-token` を使用しています。CI では `E2E=true` を設定することで、サーバー側もモック Supabase クライアントを使用し、ネットワーク接続を伴わない状態でテストを実行しています。
-
-## 環境変数
-
-`.env.example` をコピーして `.env` を作成してください。
-
-```sh
-cp apps/server/.env.example apps/server/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-コピー後、それぞれの `.env` に自分の Supabase / OpenAI の値を記入します。
-
-### apps/server/.env
-
-```env
-PORT=3000
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SECRET_KEY=your-service-role-key
-OPENAI_API_KEY=sk-proj-...
-OPENAI_MODEL=gpt-4o-mini
-CORS_ORIGIN=http://localhost:5173
-```
-
-### apps/web/.env
-
-```env
-VITE_API_BASE_URL=http://localhost:3000
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-```
-
-> 本番運用やチーム開発では、`.env` を Git にコミットせず、[dotenvx](https://dotenvx.com/)、[GitHub Secrets](https://docs.github.com/ja/actions/security-guides/using-secrets-in-github-actions)、[Doppler](https://www.doppler.com/) などを使って暗号化・集中管理することを推奨します。
 
 ## プロジェクト構成
 
