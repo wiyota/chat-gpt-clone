@@ -57,10 +57,6 @@ pnpm test
 
 # フロントエンドの E2E テスト
 pnpm --filter @chat/web test:e2e
-
-# CI をローカルで試す（act が必要）
-act -j check --env ACT=true
-act -j e2e --env ACT=true
 ```
 
 ### E2E テストについて
