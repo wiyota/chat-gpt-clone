@@ -1,6 +1,7 @@
 import { createMemo } from "solid-js";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import type { Config } from "dompurify";
 
 interface Props {
   content: string;
@@ -11,7 +12,6 @@ export function MarkdownMessage(props: Props) {
     const raw = marked.parse(props.content, {
       async: false,
       breaks: true,
-      headerIds: false,
     }) as string;
     return DOMPurify.sanitize(raw, {
       ALLOWED_TAGS: [
@@ -42,15 +42,15 @@ export function MarkdownMessage(props: Props) {
       ],
       ALLOWED_ATTR: ["href", "title", "target", "rel", "class"],
       ADD_ATTR: ["target", "rel"],
-      hook: {
-        afterSanitizeAttributes(node) {
+      hooks: {
+        afterSanitizeAttributes(node: Element) {
           if (node.tagName === "A") {
             node.setAttribute("target", "_blank");
             node.setAttribute("rel", "noopener noreferrer");
           }
         },
       },
-    });
+    } as Config);
   });
 
   return <div class="markdown-body" innerHTML={html()} />;
