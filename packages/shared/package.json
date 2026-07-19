@@ -15,6 +15,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests'",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt \"src/**/*.{ts,tsx,js,jsx,mjs,cjs}\"",
