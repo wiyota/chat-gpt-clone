@@ -3,6 +3,7 @@ import { readTestAuthFromStorage, TEST_AUTH_TOKEN_KEY, TEST_USER_KEY } from "./a
 
 describe("readTestAuthFromStorage", () => {
   beforeEach(() => {
+    window.localStorage.setItem("__test_auth_enabled", "true");
     window.localStorage.removeItem(TEST_AUTH_TOKEN_KEY);
     window.localStorage.removeItem(TEST_USER_KEY);
   });
@@ -42,11 +43,22 @@ describe("readTestAuthFromStorage", () => {
   it("returns null outside of development mode", () => {
     const originalDev = import.meta.env.DEV;
     import.meta.env.DEV = false;
+    window.localStorage.setItem("__test_auth_enabled", "true");
     window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, "test-token");
     window.localStorage.setItem(TEST_USER_KEY, JSON.stringify({ id: "user-1" }));
 
     expect(readTestAuthFromStorage()).toBeNull();
 
     import.meta.env.DEV = originalDev;
+  });
+
+  it("returns null when test auth is disabled", () => {
+    window.localStorage.removeItem("__test_auth_enabled");
+    window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, "test-token");
+    window.localStorage.setItem(
+      TEST_USER_KEY,
+      JSON.stringify({ id: "user-1", email: "test@example.com" }),
+    );
+    expect(readTestAuthFromStorage()).toBeNull();
   });
 });

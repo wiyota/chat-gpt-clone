@@ -109,6 +109,7 @@ test.describe("authenticated conversations", () => {
     });
 
     await page.context().addInitScript(() => {
+      window.localStorage.setItem("__test_auth_enabled", "true");
       window.localStorage.setItem("__test_auth_token", "e2e-token");
       window.localStorage.setItem(
         "__test_user",

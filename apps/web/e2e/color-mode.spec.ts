@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("color mode", () => {
   test.beforeEach(async ({ page }) => {
     await page.context().addInitScript(() => {
+      window.localStorage.setItem("__test_auth_enabled", "true");
       window.localStorage.setItem("__test_auth_token", "e2e-token");
       window.localStorage.setItem(
         "__test_user",

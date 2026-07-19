@@ -7,6 +7,7 @@ export const TEST_USER_KEY = "__test_user";
 
 export function readTestAuthFromStorage() {
   if (!import.meta.env.DEV) return null;
+  if (window.localStorage.getItem("__test_auth_enabled") !== "true") return null;
   const token = window.localStorage.getItem(TEST_AUTH_TOKEN_KEY);
   const rawUser = window.localStorage.getItem(TEST_USER_KEY);
   if (!token || !rawUser) return null;
