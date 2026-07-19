@@ -63,6 +63,10 @@ act -j check --env ACT=true
 act -j e2e --env ACT=true
 ```
 
+### E2E テストについて
+
+E2E テストは実際の Supabase / OpenAI API に接続しません。ブラウザ内で `page.route` を使って API レスポンスをモックし、認証には特別な `e2e-token` を使用しています。CI では `E2E=true` を設定することで、サーバー側もモック Supabase クライアントを使用し、ネットワーク接続を伴わない状態でテストを実行しています。
+
 ## 環境変数
 
 `.env` を各ワークスペースに作成してください。
