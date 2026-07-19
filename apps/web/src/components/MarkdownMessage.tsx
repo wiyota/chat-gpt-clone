@@ -8,7 +8,11 @@ interface Props {
 
 export function MarkdownMessage(props: Props) {
   const html = createMemo(() => {
-    const raw = marked.parse(props.content, { async: false, breaks: true }) as string;
+    const raw = marked.parse(props.content, {
+      async: false,
+      breaks: true,
+      headerIds: false,
+    }) as string;
     return DOMPurify.sanitize(raw, {
       ALLOWED_TAGS: [
         "p",
@@ -36,6 +40,16 @@ export function MarkdownMessage(props: Props) {
         "th",
         "td",
       ],
+      ALLOWED_ATTR: ["href", "title", "target", "rel", "class"],
+      ADD_ATTR: ["target", "rel"],
+      hook: {
+        afterSanitizeAttributes(node) {
+          if (node.tagName === "A") {
+            node.setAttribute("target", "_blank");
+            node.setAttribute("rel", "noopener noreferrer");
+          }
+        },
+      },
     });
   });
 
