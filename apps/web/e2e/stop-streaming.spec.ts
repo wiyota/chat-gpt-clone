@@ -48,16 +48,14 @@ test.describe("streaming stop", () => {
           updated_at: now,
         });
 
-        // Keep the response body streaming for a while so the stop button stays visible.
-        const chunks = [`data: conversationId:${id}\n\n`, "data: First chunk\n\n"];
-        // Periodically send whitespace to keep the connection alive.
-        for (let i = 0; i < 50; i++) {
-          chunks.push("data: \n\n");
-        }
+        // Delay the response so the frontend enters the streaming state and the
+        // stop button becomes visible before the body is consumed.
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
         return route.fulfill({
           status: 200,
           contentType: "text/event-stream",
-          body: chunks.join(""),
+          body: `data: conversationId:${id}\n\ndata: First chunk\n\ndata: [DONE]\n\n`,
           headers: {
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
@@ -97,10 +95,7 @@ test.describe("streaming stop", () => {
     await submitChatForm(page);
 
     // Wait until the stop button appears (it replaces the submit button during streaming).
-    const stopButton = page
-      .locator("button[type='button']")
-      .filter({ has: page.locator("rect") })
-      .first();
+    const stopButton = page.locator("[data-testid='stop-button']").first();
     await expect(stopButton).toBeVisible({ timeout: 5000 });
 
     // The user message should be visible while streaming.

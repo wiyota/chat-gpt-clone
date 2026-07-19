@@ -183,6 +183,7 @@ function ChatPaneInternal(props: Props) {
             >
               <Button
                 type="button"
+                data-testid="stop-button"
                 variant="destructive"
                 size="icon"
                 onClick={props.onStop}
