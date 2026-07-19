@@ -56,6 +56,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        run: pnpm --filter @chat/shared build
+
       - name: Install Playwright browsers
         run: pnpm --filter @chat/web exec playwright install --with-deps chromium
 

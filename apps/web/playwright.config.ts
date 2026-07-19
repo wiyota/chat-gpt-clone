@@ -24,13 +24,13 @@ export default defineConfig({
       command: "pnpm --filter @chat/server dev",
       url: "http://localhost:3000/health",
       reuseExistingServer: !process.env.CI || isAct,
-      timeout: 120 * 1000,
+      timeout: 180 * 1000,
     },
     {
       command: "pnpm --filter @chat/web dev",
       url: "http://localhost:5173",
       reuseExistingServer: !process.env.CI || isAct,
-      timeout: 120 * 1000,
+      timeout: 180 * 1000,
     },
   ],
 });
