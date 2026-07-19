@@ -17,6 +17,7 @@ export class OpenAIAdapter implements LLMAdapter {
   async chat(messages: Message[]): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
       model: this.model,
+      max_completion_tokens: env.MAX_COMPLETION_TOKENS as number,
       messages: messages.map(toOpenAIMessage),
     });
 
@@ -33,6 +34,7 @@ export class OpenAIAdapter implements LLMAdapter {
   async chatWithTools(messages: Message[], tools: ToolDefinition[]): Promise<ToolTurnResponse> {
     const response = await this.client.chat.completions.create({
       model: this.model,
+      max_completion_tokens: env.MAX_COMPLETION_TOKENS as number,
       messages: messages.map(toOpenAIMessage),
       tools: tools.map((tool) => ({
         type: "function" as const,
@@ -91,6 +93,7 @@ export class OpenAIAdapter implements LLMAdapter {
 
     const stream = await this.client.chat.completions.create({
       model: this.model,
+      max_completion_tokens: env.MAX_COMPLETION_TOKENS as number,
       messages: messages.map(toOpenAIMessage),
       stream: true,
       stream_options: { include_usage: true },

@@ -15,6 +15,8 @@ const titleBodySchema = Type.Object({
   title: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
 });
 
+const titleGenerationLocks = new Map<string, Promise<string | null>>();
+
 function getBearerToken(header: string | undefined): string | null {
   if (!header) return null;
   const [scheme, token, ...rest] = header.split(" ");
@@ -70,6 +72,12 @@ export const titleRoute = new Hono()
         return c.json({ title: conversation.title });
       }
 
+      const pendingGeneration = titleGenerationLocks.get(id);
+      if (pendingGeneration) {
+        const pendingTitle = await pendingGeneration;
+        return c.json({ title: pendingTitle ?? "New conversation" });
+      }
+
       if (!consumeChatRequest(auth.userId)) {
         return c.json({ error: "Too many requests" }, 429);
       }
@@ -102,7 +110,13 @@ export const titleRoute = new Hono()
         );
       }
 
-      title = await generateTitle(provider, supabase, id);
+      const generation = generateTitle(provider, supabase, id);
+      titleGenerationLocks.set(id, generation);
+      try {
+        title = await generation;
+      } finally {
+        titleGenerationLocks.delete(id);
+      }
       if (budgetCheck.reservationId) {
         await finalizeUsage(createAdminClient(), budgetCheck.reservationId, {
           model: "title-generation",

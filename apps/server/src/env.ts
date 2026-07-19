@@ -20,6 +20,9 @@ const envSchema = Type.Object({
   SUPABASE_PUBLISHABLE_KEY: Type.String({ minLength: 1 }),
   OPENAI_API_KEY: Type.String({ minLength: 1 }),
   OPENAI_MODEL: Type.Optional(Type.String()),
+  MAX_COMPLETION_TOKENS: Type.Transform(Type.Optional(Type.String()))
+    .Decode((value) => Number(value ?? "2048"))
+    .Encode((value) => String(value)),
   LLM_PROVIDER: Type.Optional(Type.Union([Type.Literal("openai"), Type.Literal("anthropic")])),
   CORS_ORIGIN: Type.Optional(Type.String({ format: "uri" })),
   CONTEXT_WINDOW_TOKENS: Type.Transform(Type.Optional(Type.String()))
@@ -56,12 +59,13 @@ export const env = Value.Decode(envSchema, {
 });
 
 export function assertProductionSecurity(): void {
-  if (process.env.NODE_ENV !== "production") return;
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const isE2E = env.E2E;
 
   const unsafeFlags = [
-    env.E2E && "E2E",
-    process.env.SKIP_BUDGET === "true" && "SKIP_BUDGET",
-    process.env.LOG_LLM_STREAM === "true" && "LOG_LLM_STREAM",
+    !isDevelopment && isE2E && "E2E",
+    !isDevelopment && !isE2E && process.env.SKIP_BUDGET === "true" && "SKIP_BUDGET",
+    !isDevelopment && !isE2E && process.env.LOG_LLM_STREAM === "true" && "LOG_LLM_STREAM",
   ].filter(Boolean);
 
   if (unsafeFlags.length > 0) {

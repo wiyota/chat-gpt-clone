@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import { env } from "./env.js";
 import { chatRoute } from "./routes/chat.js";
 import { conversationsRoute } from "./routes/conversations.js";
@@ -28,6 +29,16 @@ export function createApp(options: { llmProvider?: LLMAdapter } = {}) {
       allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       credentials: true,
+    }),
+  );
+
+  // Reject oversized JSON bodies before authentication and validation consume
+  // memory. The per-message TypeBox limits remain the semantic guardrail.
+  app.use(
+    "/api/*",
+    bodyLimit({
+      maxSize: 1 * 1024 * 1024,
+      onError: (c) => c.json({ error: "Request body too large" }, 413),
     }),
   );
 
