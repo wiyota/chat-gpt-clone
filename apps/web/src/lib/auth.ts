@@ -1,5 +1,5 @@
 import { createQuery, createMutation, useQueryClient } from "@tanstack/solid-query";
-import { createSignal, onMount } from "solid-js";
+import { createRoot, createSignal } from "solid-js";
 import { supabase } from "./supabase.js";
 
 export const TEST_AUTH_TOKEN_KEY = "__test_auth_token";
@@ -18,7 +18,7 @@ export function readTestAuthFromStorage() {
   }
 }
 
-function createTestUserOverride() {
+const { testUserOverride } = createRoot(() => {
   const initialTestAuth = readTestAuthFromStorage();
   const [testUserOverride, setTestUserOverride] = createSignal<{
     id: string;
@@ -42,31 +42,27 @@ function createTestUserOverride() {
       );
     });
 
-    onMount(() => {
-      const win = window as unknown as {
-        __testSetUser?: (user: { id: string; email?: string; access_token: string } | null) => void;
-      };
-      win.__testSetUser = (user) => {
-        if (user) {
-          window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, user.access_token);
-          window.localStorage.setItem(
-            TEST_USER_KEY,
-            JSON.stringify({ id: user.id, email: user.email }),
-          );
-        } else {
-          window.localStorage.removeItem(TEST_AUTH_TOKEN_KEY);
-          window.localStorage.removeItem(TEST_USER_KEY);
-        }
-        setTestUserOverride(user);
-        window.dispatchEvent(new StorageEvent("storage"));
-      };
-    });
+    const win = window as unknown as {
+      __testSetUser?: (user: { id: string; email?: string; access_token: string } | null) => void;
+    };
+    win.__testSetUser = (user) => {
+      if (user) {
+        window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, user.access_token);
+        window.localStorage.setItem(
+          TEST_USER_KEY,
+          JSON.stringify({ id: user.id, email: user.email }),
+        );
+      } else {
+        window.localStorage.removeItem(TEST_AUTH_TOKEN_KEY);
+        window.localStorage.removeItem(TEST_USER_KEY);
+      }
+      setTestUserOverride(user);
+      window.dispatchEvent(new StorageEvent("storage"));
+    };
   }
 
-  return { testUserOverride, setTestUserOverride };
-}
-
-const { testUserOverride } = createTestUserOverride();
+  return { testUserOverride };
+});
 
 export { testUserOverride };
 
