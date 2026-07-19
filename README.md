@@ -1,5 +1,7 @@
 # ChatGPT Clone
 
+![CI](https://github.com/wiyota/chat-gpt-clone/actions/workflows/ci.yml/badge.svg)
+
 このプロジェクトは、[Singularity Society — ChatGPTクローンで学ぶ LLMアプリ開発入門](https://singularitysociety.github.io/societys_statement/development/chatgpt_clone/README.html) を元に、SolidJS + TanStack Query + Hono + Supabase + OpenAI を組み合わせて実装した、ChatGPT のような対話アプリです。
 
 ## 概要
@@ -45,6 +47,20 @@ pnpm format
 
 # 開発サーバーの起動
 pnpm dev
+```
+
+## テスト
+
+```sh
+# 全ワークスペースの単体テスト
+pnpm test
+
+# フロントエンドの E2E テスト
+pnpm --filter @chat/web test:e2e
+
+# CI をローカルで試す（act が必要）
+act -j check --env ACT=true
+act -j e2e --env ACT=true
 ```
 
 ## 環境変数

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const isAct = !!process.env.ACT;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -21,13 +23,13 @@ export default defineConfig({
     {
       command: "pnpm --filter @chat/server dev",
       url: "http://localhost:3000/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env.CI || isAct,
       timeout: 120 * 1000,
     },
     {
       command: "pnpm --filter @chat/web dev",
       url: "http://localhost:5173",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env.CI || isAct,
       timeout: 120 * 1000,
     },
   ],
