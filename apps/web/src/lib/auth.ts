@@ -124,6 +124,10 @@ export function useSignOut() {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Immediately switch the UI to the logged-out state instead of waiting
+      // for the next refetch. TanStack Query will still refetch to confirm.
+      queryClient.setQueryData(["auth", "user"], null);
+      queryClient.setQueryData(["auth", "session"], null);
       queryClient.invalidateQueries({ queryKey: ["auth"] });
     },
   }));
