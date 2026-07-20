@@ -4,6 +4,16 @@ import type { Message } from "@chat/shared";
 import { supabase } from "@/lib/supabase.js";
 import { useSignInWithGoogle, useSignOut, useUser } from "@/lib/auth.js";
 
+// The /api/chat schema only accepts user and assistant turns with non-empty
+// content. Tool/system turns are generated server-side, so strip them from the
+// request payload to avoid 400 validation errors that clear the user's message.
+function toChatRequestMessages(messages: Message[]): Message[] {
+  return messages.filter(
+    (m): m is Message =>
+      (m.role === "user" || m.role === "assistant") && m.content.trim().length > 0,
+  );
+}
+
 function getTestAccessToken(): string | undefined {
   if (!import.meta.env.DEV) return undefined;
   return window.localStorage.getItem("__test_auth_token") ?? undefined;
@@ -87,7 +97,11 @@ export function App() {
 
       const userMessage: Message = { role: "user", content: text };
       const currentMessages = messages();
+      // Keep the full message list for rendering, but only send valid turns to
+      // the server. The server rebuilds context from the database anyway, so
+      // omitting tool/system/empty turns here is safe.
       const nextMessages = [...currentMessages, userMessage];
+      const requestMessages = toChatRequestMessages(nextMessages);
 
       setInput("");
       setPendingMessages([]);
@@ -99,7 +113,7 @@ export function App() {
       setAbortController(controller);
 
       try {
-        return await streamChat(nextMessages, activeConversationId(), token, controller.signal);
+        return await streamChat(requestMessages, activeConversationId(), token, controller.signal);
       } finally {
         setAbortController(null);
       }

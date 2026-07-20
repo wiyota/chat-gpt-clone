@@ -83,6 +83,27 @@ describe("messagesRoute", () => {
     });
   });
 
+  it("only returns user and assistant messages with non-empty content", async () => {
+    mockClient({
+      data: [
+        { role: "assistant", content: "hello", created_at: "t4" },
+        { role: "assistant", content: "", created_at: "t3" },
+        { role: "tool", content: "result", created_at: "t2" },
+        { role: "user", content: "hi", created_at: "t1" },
+      ],
+    });
+    const res = await messagesRoute.request("/", {
+      headers: { Authorization: "Bearer token" },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      messages: [
+        { role: "user", content: "hi", created_at: "t1" },
+        { role: "assistant", content: "hello", created_at: "t4" },
+      ],
+    });
+  });
+
   it("returns an empty list when no messages exist", async () => {
     mockClient({ data: [] });
     const res = await messagesRoute.request("/", {

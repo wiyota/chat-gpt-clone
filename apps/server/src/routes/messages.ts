@@ -3,6 +3,18 @@ import { authMiddleware } from "../auth/middleware.js";
 import { createUserClient } from "../supabase/client.js";
 import { MAX_MESSAGES_PER_LOAD } from "../db/messages.js";
 
+// Only user and assistant turns are safe for the client to render and echo
+// back to /api/chat. System and tool messages are generated server-side, and
+// empty content fails the chat request schema, so keep them out of the API
+// response.
+function isClientMessage(
+  message: Record<string, unknown>,
+): message is { role: "user" | "assistant"; content: string; created_at: string } {
+  const role = message.role;
+  const content = typeof message.content === "string" ? message.content.trim() : "";
+  return (role === "user" || role === "assistant") && content.length > 0;
+}
+
 function getBearerToken(header: string | undefined): string | null {
   if (!header) return null;
   const [scheme, token, ...rest] = header.split(" ");
@@ -50,5 +62,7 @@ export const messagesRoute = new Hono().use(authMiddleware).get("/", async (c) =
     return c.json({ error: "Failed to load messages" }, 500);
   }
 
-  return c.json({ messages: (data ?? []).reverse() });
+  const messages = (data ?? []).filter(isClientMessage).reverse();
+
+  return c.json({ messages });
 });
