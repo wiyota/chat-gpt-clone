@@ -39,7 +39,7 @@ describe("createMockLLMProvider", () => {
       const chunks: string[] = [];
 
       for await (const chunk of provider.chatStream([{ role: "user", content: "hi" }])) {
-        if (!chunk.done) {
+        if (!chunk.done && chunk.content !== undefined) {
           chunks.push(chunk.content);
         }
       }
@@ -52,7 +52,7 @@ describe("createMockLLMProvider", () => {
       const chunks: string[] = [];
 
       for await (const chunk of provider.chatStream([{ role: "user", content: "hi" }])) {
-        if (!chunk.done) {
+        if (!chunk.done && chunk.content !== undefined) {
           chunks.push(chunk.content);
         }
       }
