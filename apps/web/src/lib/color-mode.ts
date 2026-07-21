@@ -7,7 +7,7 @@ export type ColorModePreference = "auto" | "light" | "dark";
 type ResolvedMode = "light" | "dark";
 
 function getStoredPreference(): ColorModePreference {
-  if (typeof window === "undefined") return "auto";
+  if (typeof window === "undefined" || !window.localStorage) return "auto";
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored === "auto" || stored === "light" || stored === "dark") return stored;
   return "auto";
@@ -49,7 +49,9 @@ export function createColorMode() {
   });
 
   const setMode = (next: ColorModePreference) => {
-    window.localStorage.setItem(STORAGE_KEY, next);
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    }
     setPreference(next);
   };
 

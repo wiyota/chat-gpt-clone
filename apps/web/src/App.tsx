@@ -16,6 +16,7 @@ function toChatRequestMessages(messages: Message[]): Message[] {
 
 function getTestAccessToken(): string | undefined {
   if (!import.meta.env.DEV) return undefined;
+  if (typeof window === "undefined" || !window.localStorage) return undefined;
   return window.localStorage.getItem("__test_auth_token") ?? undefined;
 }
 

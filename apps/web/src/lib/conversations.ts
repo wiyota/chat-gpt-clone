@@ -10,6 +10,7 @@ export async function authHeaders(): Promise<Record<string, string>> {
   if (!token) {
     // Test override is only available in development builds.
     if (import.meta.env.PROD) throw new Error("Not authenticated");
+    if (typeof window === "undefined" || !window.localStorage) throw new Error("Not authenticated");
     const override = window.localStorage.getItem("__test_auth_token");
     if (!override) throw new Error("Not authenticated");
     return {

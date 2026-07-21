@@ -8,6 +8,7 @@ export const TEST_USER_KEY = "__test_user";
 export function readTestAuthFromStorage() {
   if (import.meta.env.PROD) return null;
   if (!import.meta.env.DEV) return null;
+  if (typeof window === "undefined" || !window.localStorage) return null;
   if (window.localStorage.getItem("__test_auth_enabled") !== "true") return null;
   const token = window.localStorage.getItem(TEST_AUTH_TOKEN_KEY);
   const rawUser = window.localStorage.getItem(TEST_USER_KEY);
@@ -48,15 +49,17 @@ const { testUserOverride } = createRoot(() => {
       __testSetUser?: (user: { id: string; email?: string; access_token: string } | null) => void;
     };
     win.__testSetUser = (user) => {
-      if (user) {
-        window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, user.access_token);
-        window.localStorage.setItem(
-          TEST_USER_KEY,
-          JSON.stringify({ id: user.id, email: user.email }),
-        );
-      } else {
-        window.localStorage.removeItem(TEST_AUTH_TOKEN_KEY);
-        window.localStorage.removeItem(TEST_USER_KEY);
+      if (typeof window !== "undefined" && window.localStorage) {
+        if (user) {
+          window.localStorage.setItem(TEST_AUTH_TOKEN_KEY, user.access_token);
+          window.localStorage.setItem(
+            TEST_USER_KEY,
+            JSON.stringify({ id: user.id, email: user.email }),
+          );
+        } else {
+          window.localStorage.removeItem(TEST_AUTH_TOKEN_KEY);
+          window.localStorage.removeItem(TEST_USER_KEY);
+        }
       }
       setTestUserOverride(user);
       window.dispatchEvent(new StorageEvent("storage"));
