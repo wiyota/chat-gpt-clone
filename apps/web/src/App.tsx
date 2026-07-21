@@ -36,6 +36,7 @@ import {
 import { ChatPane } from "@/components/ChatPane.js";
 import { ConversationSidebar } from "@/components/ConversationSidebar.js";
 import { Button } from "@/components/ui/button.js";
+import { Skeleton } from "@/components/ui/skeleton.js";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
@@ -342,12 +343,22 @@ export function App() {
     <Show
       when={user.data}
       fallback={
-        <div class="flex min-h-screen items-center justify-center bg-muted/50 p-4">
+        <div class="flex min-h-screen items-center justify-center bg-background p-4">
           <div class="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
-            <h1 class="mb-4 text-center text-2xl font-semibold">ChatGPT Clone</h1>
-            <Button class="w-full" onClick={() => signIn.mutate()} disabled={signIn.isPending}>
-              Sign in with Google
-            </Button>
+            <Show
+              when={!user.isPending}
+              fallback={
+                <>
+                  <Skeleton class="mx-auto mb-4 h-8 w-48 bg-muted-foreground/20" />
+                  <Skeleton class="h-10 w-full bg-muted-foreground/20" />
+                </>
+              }
+            >
+              <h1 class="mb-4 text-center text-2xl font-semibold">ChatGPT Clone</h1>
+              <Button class="w-full" onClick={() => signIn.mutate()} disabled={signIn.isPending}>
+                Sign in with Google
+              </Button>
+            </Show>
           </div>
         </div>
       }
